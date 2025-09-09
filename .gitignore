@@ -13,7 +13,7 @@ ENV/
 # Build artifacts
 build/
 dist/
-*.spec
+# *.spec  # Commented out to allow pyinstaller.spec
 
 # OS files
 .DS_Store

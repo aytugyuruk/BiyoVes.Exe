@@ -1,3 +1,4 @@
 *.ckpt filter=lfs diff=lfs merge=lfs -text
 *.pt filter=lfs diff=lfs merge=lfs -text
 *.onnx filter=lfs diff=lfs merge=lfs -text
+MODNet/pretrained/modnet_photographic_portrait_matting.ckpt filter=lfs diff=lfs merge=lfs -text
