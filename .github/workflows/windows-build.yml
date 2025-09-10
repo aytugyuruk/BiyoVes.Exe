@@ -43,6 +43,18 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: pyinstaller --noconfirm .\pyinstaller.spec
 
+      - name: List build output
+        shell: pwsh
+        run: |
+          Write-Host "Contents of dist folder:"
+          Get-ChildItem -Path "dist" -Recurse | Format-Table -AutoSize
+          Write-Host "Contents of dist/BiyoVes folder:"
+          if (Test-Path "dist\BiyoVes") {
+            Get-ChildItem -Path "dist\BiyoVes" -Recurse | Format-Table -AutoSize
+          } else {
+            Write-Host "dist\BiyoVes folder not found!"
+          }
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
