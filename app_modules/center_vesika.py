@@ -57,33 +57,65 @@ def create_passport_photo(image_path, output_path):
 
     print(f"Yüz bulundu. Konum: x={x}, y={y}, Genişlik={w}, Yükseklik={h}")
 
-    # 4. Vesikalık kırpma çerçevesini hesapla
-    
-    # DEĞİŞİKLİK 1: ÇERÇEVELEME (ZOOM)
-    # Göğüs hizasını kadraja dahil etmek için daha geniş bir alan kırpıyoruz.
-    # Bu katsayıyı artırarak (1.8 -> 2.2) kişinin çerçevede daha küçük görünmesini
-    # ve vücudunun daha fazla kısmının görünmesini sağlıyoruz.
+    # 4. Vesikalık kırpma çerçevesini hesapla (en-boy oranını bozmadan)
+    def compute_bounded_crop(img_w, img_h, desired_w, desired_h, face_center_x, face_top_y, top_padding_factor):
+        crop_w = int(desired_w)
+        crop_h = int(desired_h)
+
+        if crop_w > img_w or crop_h > img_h:
+            scale = min(img_w / crop_w, img_h / crop_h)
+            scale = max(scale, 1e-6)
+            crop_w = int(round(crop_w * scale))
+            crop_h = int(round(crop_h * scale))
+
+        x1 = int(round(face_center_x - crop_w / 2))
+        y1 = int(round(face_top_y - top_padding_factor * crop_h))
+        x2 = x1 + crop_w
+        y2 = y1 + crop_h
+
+        if x1 < 0:
+            shift = -x1
+            x1 += shift
+            x2 += shift
+        if x2 > img_w:
+            shift = x2 - img_w
+            x1 -= shift
+            x2 -= shift
+        if y1 < 0:
+            shift = -y1
+            y1 += shift
+            y2 += shift
+        if y2 > img_h:
+            shift = y2 - img_h
+            y1 -= shift
+            y2 -= shift
+
+        if x1 < 0 or y1 < 0 or x2 > img_w or y2 > img_h:
+            scale = min(img_w / crop_w, img_h / crop_h)
+            scale = max(min(scale, 1.0), 1e-6)
+            crop_w = int(round(crop_w * scale))
+            crop_h = int(round(crop_h * scale))
+            x1 = int(round(max(0, min(img_w - crop_w, face_center_x - crop_w / 2))))
+            y1 = int(round(max(0, min(img_h - crop_h, face_top_y - top_padding_factor * crop_h))))
+            x2 = x1 + crop_w
+            y2 = y1 + crop_h
+
+        x1 = max(0, min(x1, img_w - 1))
+        y1 = max(0, min(y1, img_h - 1))
+        x2 = max(x1 + 1, min(x2, img_w))
+        y2 = max(y1 + 1, min(y2, img_h))
+        return x1, y1, x2, y2
+
     crop_width_factor = 2
-    crop_width = int(w * crop_width_factor) 
-    
-    # Yeni en-boy oranına (4.5/6) göre yüksekliği hesapla
-    crop_height = int(crop_width * (TARGET_HEIGHT_CM / TARGET_WIDTH_CM)) 
+    crop_width = int(w * crop_width_factor)
+    crop_height = int(crop_width * (TARGET_HEIGHT_CM / TARGET_WIDTH_CM))
 
     face_center_x = x + w // 2
-    crop_x1 = face_center_x - crop_width // 2
-
-    # Üst boşluk için biyometrikteki ayarı koruyoruz.
-    top_padding_factor = 0.25
-    crop_y1 = y - int(crop_height * top_padding_factor)
-
-    crop_x2 = crop_x1 + crop_width
-    crop_y2 = crop_y1 + crop_height
-
     img_h, img_w, _ = original_image.shape
-    crop_x1 = max(0, crop_x1)
-    crop_y1 = max(0, crop_y1)
-    crop_x2 = min(img_w, crop_x2)
-    crop_y2 = min(img_h, crop_y2)
+    top_padding_factor = 0.25
+    crop_x1, crop_y1, crop_x2, crop_y2 = compute_bounded_crop(
+        img_w, img_h, crop_width, crop_height, face_center_x, y, top_padding_factor
+    )
 
     cropped_image_bgr = original_image[crop_y1:crop_y2, crop_x1:crop_x2]
 

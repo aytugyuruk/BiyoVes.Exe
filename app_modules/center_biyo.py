@@ -57,32 +57,72 @@ def create_biometric_photo(image_path, output_path):
 
     print(f"Yüz bulundu. Konum: x={x}, y={y}, Genişlik={w}, Yükseklik={h}")
 
-    # 4. Biyometrik kırpma çerçevesini hesapla
-    
-    # Kişinin zoom seviyesini (boyutunu) belirleyen katsayı.
-    # Biyometrik standart için bu değeri tekrar 1.8'e döndürüyoruz.
-    crop_width = int(w * 1.8) 
-    
-    crop_height = int(crop_width * (TARGET_HEIGHT_CM / TARGET_WIDTH_CM)) 
+    # 4. Biyometrik kırpma çerçevesini hesapla (en-boy oranını bozmadan)
+    def compute_bounded_crop(img_w, img_h, desired_w, desired_h, face_center_x, face_top_y, top_padding_factor):
+        # Başta hedef en-boy oranıyla bir kırpma dikdörtgeni tanımla
+        crop_w = int(desired_w)
+        crop_h = int(desired_h)
+
+        # Eğer hedef kırpma, görüntüden daha büyükse orantılı küçült
+        if crop_w > img_w or crop_h > img_h:
+            scale = min(img_w / crop_w, img_h / crop_h)
+            scale = max(scale, 1e-6)
+            crop_w = int(round(crop_w * scale))
+            crop_h = int(round(crop_h * scale))
+
+        # Sol üst noktayı, üst boşluğu koruyacak şekilde konumlandır
+        x1 = int(round(face_center_x - crop_w / 2))
+        y1 = int(round(face_top_y - top_padding_factor * crop_h))
+
+        x2 = x1 + crop_w
+        y2 = y1 + crop_h
+
+        # Dışarı taşarsa önce kaydırarak içeri al
+        if x1 < 0:
+            shift = -x1
+            x1 += shift
+            x2 += shift
+        if x2 > img_w:
+            shift = x2 - img_w
+            x1 -= shift
+            x2 -= shift
+        if y1 < 0:
+            shift = -y1
+            y1 += shift
+            y2 += shift
+        if y2 > img_h:
+            shift = y2 - img_h
+            y1 -= shift
+            y2 -= shift
+
+        # Hala sığmıyorsa (çok küçük görüntüler), oranı bozmadan küçült ve tekrar hizala
+        if x1 < 0 or y1 < 0 or x2 > img_w or y2 > img_h:
+            scale = min(img_w / crop_w, img_h / crop_h)
+            scale = max(min(scale, 1.0), 1e-6)
+            crop_w = int(round(crop_w * scale))
+            crop_h = int(round(crop_h * scale))
+            x1 = int(round(max(0, min(img_w - crop_w, face_center_x - crop_w / 2))))
+            y1 = int(round(max(0, min(img_h - crop_h, face_top_y - top_padding_factor * crop_h))))
+            x2 = x1 + crop_w
+            y2 = y1 + crop_h
+
+        # Son güvenlik: sınırlar içinde tut
+        x1 = max(0, min(x1, img_w - 1))
+        y1 = max(0, min(y1, img_h - 1))
+        x2 = max(x1 + 1, min(x2, img_w))
+        y2 = max(y1 + 1, min(y2, img_h))
+        return x1, y1, x2, y2
+
+    # İstenen kırpma boyutları hedef oranla tutarlı
+    crop_width = int(w * 1.8)
+    crop_height = int(crop_width * (TARGET_HEIGHT_CM / TARGET_WIDTH_CM))
 
     face_center_x = x + w // 2
-    crop_x1 = face_center_x - crop_width // 2
-
-    # DEĞİŞİKLİK: SADECE BU SATIRI GÜNCELLEDİK
-    # Kişiyi fotoğraf içinde aşağı kaydırmak (ve tepede daha fazla boşluk bırakmak) için
-    # bu katsayıyı belirgin şekilde artırdık (0.15 -> 0.28).
-    # Bu, kırpma çerçevesinin orijinal resimde daha yukarıdan başlamasını sağlar.
-    top_padding_factor = 0.28
-    crop_y1 = y - int(crop_height * top_padding_factor)
-
-    crop_x2 = crop_x1 + crop_width
-    crop_y2 = crop_y1 + crop_height
-
     img_h, img_w, _ = original_image.shape
-    crop_x1 = max(0, crop_x1)
-    crop_y1 = max(0, crop_y1)
-    crop_x2 = min(img_w, crop_x2)
-    crop_y2 = min(img_h, crop_y2)
+    top_padding_factor = 0.28
+    crop_x1, crop_y1, crop_x2, crop_y2 = compute_bounded_crop(
+        img_w, img_h, crop_width, crop_height, face_center_x, y, top_padding_factor
+    )
 
     cropped_image_bgr = original_image[crop_y1:crop_y2, crop_x1:crop_x2]
 

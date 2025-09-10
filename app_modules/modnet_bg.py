@@ -153,10 +153,32 @@ class ModNetBGRemover:
         h, w = original_hw
         matte_resized = cv2.resize(matte, (w, h), interpolation=cv2.INTER_LINEAR)
         return np.clip(matte_resized, 0.0, 1.0)
+    
+    def _imread_robust(self, path: str) -> Optional[np.ndarray]:
+        """Unicode yol ve bazı JPEG varyantları için sağlam okuma.
+        Önce OpenCV imdecode ile dener, başarısızsa PIL -> BGR dönüşümü yapar.
+        """
+        try:
+            data = np.fromfile(path, dtype=np.uint8)
+            if data.size > 0:
+                img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                if img is not None:
+                    return img
+        except Exception:
+            pass
+        # PIL ile yedek okuma (özellikle CMYK JPEG vb.)
+        try:
+            with Image.open(path) as im:
+                im = im.convert('RGB')
+                arr = np.array(im)
+                bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+                return bgr
+        except Exception:
+            return None
         
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
         """ArkaplanÄ± kaldÄ±r ve renkli arkaplana (JPG) kompozit et. JPEG kalite: 100"""
-        bgr = cv2.imread(input_path)
+        bgr = self._imread_robust(input_path)
         if bgr is None:
             raise RuntimeError(f"GÃ¶rÃ¼ntÃ¼ okunamadÄ±: {input_path}")
 
