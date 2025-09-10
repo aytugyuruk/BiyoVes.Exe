@@ -1,0 +1,59 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Verify files exist
+      run: |
+        echo "Checking required files..."
+        if (Test-Path "desktop_app.py") { echo "✓ desktop_app.py found" } else { echo "✗ desktop_app.py missing"; exit 1 }
+        if (Test-Path "haarcascade_frontalface_default.xml") { echo "✓ haarcascade file found" } else { echo "✗ haarcascade file missing"; exit 1 }
+        if (Test-Path "MODNet\pretrained\modnet_photographic_portrait_matting.ckpt") { echo "✓ MODNet checkpoint found" } else { echo "✗ MODNet checkpoint missing"; exit 1 }
+        if (Test-Path "pyinstaller.spec") { echo "✓ pyinstaller.spec found" } else { echo "✗ pyinstaller.spec missing"; exit 1 }
+
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --noconfirm pyinstaller.spec
+
+    - name: Check build output
+      run: |
+        echo "Build output structure:"
+        Get-ChildItem -Path "dist" -Recurse | Format-Table -AutoSize
+        echo "Checking for BiyoVes folder..."
+        if (Test-Path "dist\BiyoVes") {
+          echo "✓ dist\BiyoVes folder found"
+          Get-ChildItem -Path "dist\BiyoVes" | Format-Table -AutoSize
+        } else {
+          echo "✗ dist\BiyoVes folder not found"
+          echo "Available in dist:"
+          Get-ChildItem -Path "dist" | Format-Table -AutoSize
+        }
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BiyoVes-Windows
+        path: dist/BiyoVes
