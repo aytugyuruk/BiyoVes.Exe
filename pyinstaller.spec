@@ -49,6 +49,7 @@ exe = EXE(
     a.datas,
     [],
     name='BiyoVes',
+    icon=os.path.join(project_root, 'appicon.icns'),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
