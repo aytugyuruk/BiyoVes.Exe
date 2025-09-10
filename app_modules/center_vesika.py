@@ -28,6 +28,34 @@ CANVAS_HEIGHT_PX = cm_to_pixels(CANVAS_HEIGHT_CM)
 CHIN_TO_TOP_HAIR_PX = mm_to_pixels(CHIN_TO_TOP_HAIR_MM)
 TOP_MARGIN_PX = mm_to_pixels(TOP_MARGIN_MM)
 
+def _load_face_cascade() -> "cv2.CascadeClassifier":
+    """Haar cascade dosyasını güvenli şekilde yükle."""
+    candidate_paths = []
+    # 1) OpenCV'nin kendi haarcascades dizini
+    try:
+        candidate_paths.append(os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml'))
+    except Exception:
+        pass
+    # 2) Proje kökü (dosya yapısına göre bir üst klasör)
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    candidate_paths.append(os.path.join(repo_root, 'haarcascade_frontalface_default.xml'))
+    # 3) Çalışma dizini
+    candidate_paths.append(os.path.join(os.getcwd(), 'haarcascade_frontalface_default.xml'))
+
+    last_err = None
+    for p in candidate_paths:
+        try:
+            if os.path.exists(p):
+                cascade = cv2.CascadeClassifier(p)
+                if not cascade.empty():
+                    print(f"Using face cascade: {p}")
+                    return cascade
+        except Exception as e:
+            last_err = e
+            continue
+
+    raise RuntimeError(f"Yüz algılama modeli yüklenemedi. Denenen yollar: {candidate_paths}. Hata: {last_err}")
+
 def detect_head_top(image, face_x, face_y, face_w, face_h):
     """Detect the topmost point of the head using edge detection"""
     
@@ -100,7 +128,7 @@ def create_smart_vesikalik_photo(input_path, output_path):
     print(f"Original image size: {image.shape[1]}x{image.shape[0]}")
     
     # Face detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade = _load_face_cascade()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
     
@@ -113,9 +141,10 @@ def create_smart_vesikalik_photo(input_path, output_path):
     
     # Calculate face reference points
     face_center_x = x + w // 2
+    face_center_y = y + h // 2
     face_bottom_y = y + h  # Approximate chin
     
-    print(f"Face center: ({face_center_x}, face_center_y)")
+    print(f"Face center: ({face_center_x}, {face_center_y})")
     print(f"Face bottom (chin): ({face_center_x}, {face_bottom_y})")
     
     # Detect head top using edge detection
