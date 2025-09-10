@@ -10,8 +10,8 @@ import tempfile
 # Local modules
 from app_modules.modnet_bg import ModNetBGRemover
 # Yeni sürümlerde Haar tabanlı kırpma fonksiyonları sağlanıyor
-from app_modules.center_biyo import create_biometric_photo as create_biyometrik
-from app_modules.center_vesika import create_passport_photo as create_vesikalik
+from app_modules.center_biyo import create_smart_biometric_photo as create_biyometrik
+from app_modules.center_vesika import create_smart_vesikalik_photo as create_vesikalik
 from app_modules.duzen import (
 	create_image_layout,
 	create_image_layout_vesikalik,
