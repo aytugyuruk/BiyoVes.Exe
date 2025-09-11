@@ -49,7 +49,8 @@ exe = EXE(
     a.datas,
     [],
     name='BiyoVes',
-    icon=os.path.join(project_root, 'appicon.icns'),
+    # Windows için .ico yoksa ikonu devre dışı bırak
+    icon=None,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -59,5 +60,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    onefile=False,  # Use onedir mode
+    onefile=True,  # Tek exe
 )

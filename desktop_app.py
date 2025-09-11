@@ -1,7 +1,8 @@
 import os
+import webbrowser
 import threading
 import traceback
-from tkinter import Tk, Frame, Label, Button, Radiobutton, StringVar, filedialog, messagebox, X, LEFT, Checkbutton
+from tkinter import Tk, Frame, Label, Button, Radiobutton, StringVar, filedialog, messagebox, X, LEFT, Checkbutton, Entry
 from PIL import Image
 import cv2
 import numpy as np
@@ -19,13 +20,14 @@ from app_modules.duzen import (
 	create_image_layout_2lu_vesikalik,
 )
 from app_modules.enhance import enhance_image, natural_enhance_image, auto_enhance_image
+from app_modules.user_credits import credits_manager
 
 
 class App:
 	def __init__(self, root: Tk):
 		self.root = root
 		self.root.title("Vesikalık/Biyometrik Hazırlayıcı")
-		self.root.geometry("520x280")
+		self.root.geometry("520x380")
 
 		self.image_path = None
 		self.type_selection = StringVar(value="vesikalik")
@@ -96,6 +98,26 @@ class App:
 		# Ana durum etiketi
 		self.status_label = Label(self.root, text="Modeller yükleniyor...", anchor="w")
 		self.status_label.pack(fill=X, padx=10, pady=(0, 8))
+		
+		# Kredi bilgisi etiketi
+		self.credits_label = Label(self.root, text="", anchor="w", fg="green", font=("Arial", 9, "bold"))
+		self.credits_label.pack(fill=X, padx=10, pady=(0, 5))
+		
+		# Bakiye ekle butonu (her zaman görünür)
+		self.add_balance_button = Button(self.root, text="Bakiye Ekle", command=self._open_shopier, state="normal")
+		self.add_balance_button.pack(fill=X, padx=10)
+
+		# Anahtar girme alanı
+		key_frame = Frame(self.root)
+		key_frame.pack(fill=X, padx=10, pady=(6, 0))
+		Label(key_frame, text="Anahtar Gir:").pack(side=LEFT)
+		self.key_entry = Entry(key_frame, width=22)
+		self.key_entry.pack(side=LEFT, padx=6)
+		self.redeem_button = Button(key_frame, text="Anahtar Gir", command=self._redeem_key)
+		self.redeem_button.pack(side=LEFT)
+		
+		# Kredi durumunu güncelle
+		self._update_credits_display()
 
 	def set_status(self, text: str) -> None:
 		def _apply():
@@ -108,6 +130,44 @@ class App:
 			self.model_status_label.config(text=text)
 			self.root.update_idletasks()
 		self.root.after(0, _apply)
+	
+	def _update_credits_display(self) -> None:
+		"""Kredi durumunu UI'da güncelle"""
+		remaining = credits_manager.get_remaining_credits()
+		if remaining > 0:
+			self.credits_label.config(text=f"💰 Kalan ücretsiz hak: {remaining}", fg="green")
+		else:
+			self.credits_label.config(text="❌ Ücretsiz haklarınız bitti - Satın alın!", fg="red")
+			self.set_status("Ücretsiz haklarınız bitti - Bakiye ekleyin")
+
+	def _open_shopier(self) -> None:
+		"""Shopier ödeme sayfasını aç"""
+		shopier_url = "https://www.shopier.com/ShowProductNew/products.php?id=123456"  # örnek link
+		try:
+			webbrowser.open(shopier_url)
+		except Exception as e:
+			messagebox.showerror("Hata", f"Ödeme sayfası açılamadı:\n{e}")
+
+	def _redeem_key(self) -> None:
+		"""Kullanıcının girdiği anahtarı doğrula ve krediyi ekle"""
+		key_str = self.key_entry.get().strip()
+		if not key_str:
+			messagebox.showwarning("Uyarı", "Lütfen bir anahtar girin.")
+			return
+		ok, msg, added = credits_manager.redeem_key(key_str)
+		if ok:
+			self.key_entry.delete(0, 'end')
+			self._update_credits_display()
+			messagebox.showinfo("Başarılı", msg)
+			self.set_status(f"{added} hak eklendi")
+		else:
+			messagebox.showerror("Geçersiz Anahtar", msg)
+	
+	def _show_no_credits_dialog(self) -> None:
+		"""Kredi bittiğinde bilgilendir ve Bakiye Ekle butonuna yönlendir"""
+		messagebox.showwarning("Ücretsiz Haklar Bitti", "Ücretsiz haklarınız bitti. Bakiye eklemek için 'Bakiye Ekle' butonuna tıklayın.")
+		self._update_credits_display()
+	
 	
 	def _start_model_loading(self) -> None:
 		"""Uygulama başlangıcında modelleri arkaplanda yükle"""
@@ -230,6 +290,11 @@ class App:
 			messagebox.showwarning("Uyarı", "AI modelleri henüz yüklenmedi. Lütfen bekleyin.")
 			return
 		
+		# Kredi kontrolü
+		if not credits_manager.has_credits():
+			self._show_no_credits_dialog()
+			return
+		
 		# İşleme başladığını kullanıcıya bildir
 		self.set_status("🔄 İşlem başlatılıyor...")
 		self.process_button.config(state="disabled", text="İşleniyor...")
@@ -237,12 +302,19 @@ class App:
 		threading.Thread(target=self._process_pipeline_safe, daemon=True).start()
 
 	def _process_pipeline_safe(self) -> None:
+		# İşlem başlamadan önce krediyi rezerve et
+		credits_manager.use_credit()
+		
 		try:
 			self._process_pipeline()
 		except Exception as e:
 			traceback.print_exc()
-			self.root.after(0, lambda: messagebox.showerror("Hata", f"İşleme sırasında hata oluştu:\n{e}"))
-			self.set_status("Hata oluştu")
+			# Hata durumunda krediyi geri ver
+			credits_manager.add_credits(1)
+			self.root.after(0, self._update_credits_display)
+			
+			self.root.after(0, lambda: messagebox.showerror("Hata", f"İşleme sırasında hata oluştu:\n{e}\n\nKrediniz geri verildi."))
+			self.set_status("Hata oluştu - Kredi geri verildi")
 			# Hata durumunda butonu eski haline getir
 			self.root.after(0, lambda: self.process_button.config(state="normal", text="İşle"))
 
@@ -428,10 +500,19 @@ class App:
 
 		self.set_status(f"Kaydedildi: {final_output_path}")
 		
+		# UI'ı güncelle (kredi zaten başlangıçta kullanıldı)
+		self.root.after(0, self._update_credits_display)
+		
+		# Kalan kredi sayısını mesajda göster
+		remaining_credits = credits_manager.get_remaining_credits()
+		credits_message = f"\n\nKalan ücretsiz hak: {remaining_credits}"
+		if remaining_credits == 0:
+			credits_message += "\n⚠️ Ücretsiz haklarınız bitti! Premium paket satın alın."
+		
 		# İşlem tamamlandığında mesaj kutusu göster ve butonu eski haline getir
 		self.root.after(0, lambda: messagebox.showinfo(
 			"İşlem Tamamlandı", 
-			f"Fotoğraf başarıyla işlendi ve kaydedildi!\n\nDosya: {os.path.basename(final_output_path)}\nKonum: {os.path.dirname(final_output_path)}"
+			f"Fotoğraf başarıyla işlendi ve kaydedildi!\n\nDosya: {os.path.basename(final_output_path)}\nKonum: {os.path.dirname(final_output_path)}{credits_message}"
 		))
 		# Butonu eski haline getir
 		self.root.after(0, lambda: self.process_button.config(state="normal", text="İşle"))
