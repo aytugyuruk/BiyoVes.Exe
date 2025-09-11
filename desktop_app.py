@@ -142,7 +142,7 @@ class App:
 
 	def _open_shopier(self) -> None:
 		"""Shopier ödeme sayfasını aç"""
-		shopier_url = "https://www.shopier.com/ShowProductNew/products.php?id=123456"  # örnek link
+		shopier_url = "https://www.shopier.com/biyoves"
 		try:
 			webbrowser.open(shopier_url)
 		except Exception as e:
