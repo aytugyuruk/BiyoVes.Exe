@@ -17,6 +17,7 @@ hiddenimports = [
     'PIL',
     'torch',
     'numpy',
+    'requests',
     'tkinter',
     'tkinter.filedialog',
     'tkinter.messagebox',
@@ -49,8 +50,7 @@ exe = EXE(
     a.datas,
     [],
     name='BiyoVes',
-    # Windows için .ico yoksa ikonu devre dışı bırak
-    icon=None,
+    icon=os.path.join(project_root, 'appicon.icns'),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -60,5 +60,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    onefile=True,  # Tek exe
+    onefile=False,  # Use onedir mode
 )
