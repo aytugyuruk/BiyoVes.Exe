@@ -8,20 +8,20 @@ project_root = os.path.abspath('.')
 # Data files to include
 datas = [
     ('haarcascade_frontalface_default.xml', '.'),
-    ('MODNet/pretrained/modnet_photographic_portrait_matting.ckpt', 'MODNet/pretrained'),
 ]
 
 # Hidden imports
 hiddenimports = [
     'cv2',
     'PIL',
-    'torch',
     'numpy',
     'requests',
     'tkinter',
     'tkinter.filedialog',
     'tkinter.messagebox',
     'tkinter.ttk',
+    'replicate',
+    'dotenv',
 ]
 
 a = Analysis(

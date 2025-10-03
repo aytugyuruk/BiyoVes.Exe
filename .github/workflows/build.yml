@@ -31,7 +31,7 @@ jobs:
         echo "Checking required files..."
         if (Test-Path "desktop_app.py") { echo "✓ desktop_app.py found" } else { echo "✗ desktop_app.py missing"; exit 1 }
         if (Test-Path "haarcascade_frontalface_default.xml") { echo "✓ haarcascade file found" } else { echo "✗ haarcascade file missing"; exit 1 }
-        if (Test-Path "MODNet\pretrained\modnet_photographic_portrait_matting.ckpt") { echo "✓ MODNet checkpoint found" } else { echo "✗ MODNet checkpoint missing"; exit 1 }
+        echo "Skipping MODNet checkpoint check (now using Replicate API)"
         if (Test-Path "pyinstaller.spec") { echo "✓ pyinstaller.spec found" } else { echo "✗ pyinstaller.spec missing"; exit 1 }
 
     - name: Build with PyInstaller
