@@ -10,7 +10,7 @@ datas = [
     ('haarcascade_frontalface_default.xml', '.'),
 ]
 
-# Hidden imports - sadece gerekli olanlar
+# Hidden imports - minimal set
 hiddenimports = [
     'cv2',
     'PIL',
@@ -21,12 +21,8 @@ hiddenimports = [
     'tkinter.messagebox',
     'tkinter.ttk',
     'replicate',
-    'pydantic',
-    'httpx',
-    'urllib3',
-    'certifi',
-    'charset_normalizer',
-    'typing_extensions',
+    'importlib.metadata',
+    'pkg_resources',
 ]
 
 a = Analysis(

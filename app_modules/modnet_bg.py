@@ -4,8 +4,8 @@ from PIL import Image
 from typing import Optional, Tuple
 import requests
 
-# Basit ve temiz import - diğer kütüphaneler gibi
-import replicate
+# Lazy import - sadece gerektiğinde yükle
+replicate = None
 
 
 class ModNetBGRemover:
@@ -24,14 +24,22 @@ class ModNetBGRemover:
         os.environ["REPLICATE_API_TOKEN"] = self._replicate_token
         print(f"🔑 API Token set edildi: {self._replicate_token[:10]}...")
         
-        print("✅ Replicate modülü hazır")
+        # Lazy import - sadece gerektiğinde yükle
+        global replicate
+        if replicate is None:
+            try:
+                import replicate
+                print("✅ Replicate modülü yüklendi")
+            except ImportError as e:
+                print(f"❌ Replicate modülü yüklenemedi: {e}")
+                raise RuntimeError("Replicate paketi yüklenemedi")
         
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
         """Replicate API ile arkaplanı kaldır, beyaz arkaplana kompozit et ve JPG kaydet."""
         if not os.path.exists(input_path):
             raise RuntimeError(f"Giriş dosyası bulunamadı: {input_path}")
         
-        # Replicate artık normal import edildi, kontrol gerekmez
+        # Replicate lazy import edildi, kontrol gerekmez
 
         # 1) Replicate'a gönderim: local dosyayı upload edip URL elde et
         # Replicate Python SDK, dosya path'ini doğrudan input olarak destekler.
