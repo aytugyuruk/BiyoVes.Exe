@@ -3,9 +3,14 @@ import io
 from PIL import Image
 from typing import Optional, Tuple
 import requests
+import ssl
+import urllib3
 
 # importlib.metadata sorununu çözmek için environment variable set et
 os.environ['PIP_DISABLE_PIP_VERSION_CHECK'] = '1'
+
+# SSL sertifika doğrulama sorununu çöz (Windows için)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Direkt import - AI servisine bağlan
 import replicate
@@ -26,6 +31,10 @@ class ModNetBGRemover:
         # Replicate için environment variable set et (her durumda)
         os.environ["REPLICATE_API_TOKEN"] = self._replicate_token
         print(f"🔑 API Token set edildi: {self._replicate_token[:10]}...")
+        
+        # SSL sertifika doğrulama sorununu çöz
+        os.environ["CURL_CA_BUNDLE"] = ""
+        os.environ["REQUESTS_CA_BUNDLE"] = ""
         
         print("✅ Replicate modülü hazır")
         
@@ -73,7 +82,8 @@ class ModNetBGRemover:
             if not file_url:
                 raise RuntimeError("Replicate çıktısı çözümlenemedi.")
             try:
-                resp = requests.get(file_url, timeout=30)
+                # SSL doğrulamasını devre dışı bırak (Windows için)
+                resp = requests.get(file_url, timeout=30, verify=False)
                 resp.raise_for_status()
                 file_bytes = resp.content
             except Exception as e:
