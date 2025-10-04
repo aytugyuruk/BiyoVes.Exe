@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+from PyInstaller.utils.hooks import copy_metadata
 
 # Get the project root directory
 project_root = os.path.abspath('.')
@@ -9,6 +10,9 @@ project_root = os.path.abspath('.')
 datas = [
     ('haarcascade_frontalface_default.xml', '.'),
 ]
+
+# Replicate metadata dosyalarını dahil et (Windows için gerekli)
+datas += copy_metadata('replicate')
 
 # Hidden imports - replicate için gerekli modüller
 hiddenimports = [
