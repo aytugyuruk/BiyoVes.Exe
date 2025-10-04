@@ -36,6 +36,9 @@ class ModNetBGRemover:
         os.environ["CURL_CA_BUNDLE"] = ""
         os.environ["REQUESTS_CA_BUNDLE"] = ""
         
+        # DNS çözümleme sorununu çöz (Windows için)
+        os.environ["REPLICATE_API_BASE"] = "https://api.replicate.com"
+        
         print("✅ Replicate modülü hazır")
         
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
@@ -52,10 +55,23 @@ class ModNetBGRemover:
             "image": open(input_path, "rb")
         }
         try:
-            output = replicate.run(
-                "pollinations/modnet:da7d45f3b836795f945f221fc0b01a6d3ab7f5e163f13208948ad436001e2255",
-                input=input_payload
-            )
+            # DNS çözümleme sorununu çözmek için retry mekanizması
+            import time
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    output = replicate.run(
+                        "pollinations/modnet:da7d45f3b836795f945f221fc0b01a6d3ab7f5e163f13208948ad436001e2255",
+                        input=input_payload
+                    )
+                    break  # Başarılı olursa döngüden çık
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        print(f"🔄 DNS çözümleme hatası, {attempt + 1}/{max_retries} deneme...")
+                        time.sleep(2)  # 2 saniye bekle
+                        continue
+                    else:
+                        raise RuntimeError(f"Replicate çağrısı başarısız (DNS hatası): {e}")
         except Exception as e:
             raise RuntimeError(f"Replicate çağrısı başarısız: {e}")
 
