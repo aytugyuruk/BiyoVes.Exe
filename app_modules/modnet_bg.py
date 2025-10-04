@@ -4,7 +4,13 @@ from PIL import Image
 from typing import Optional, Tuple
 import requests
 from dotenv import load_dotenv
-import replicate
+
+# Replicate import with fallback
+try:
+    import replicate
+except ImportError as e:
+    print(f"Replicate import hatası: {e}")
+    replicate = None
 
 
 class ModNetBGRemover:
@@ -27,6 +33,9 @@ class ModNetBGRemover:
         """Replicate API ile arkaplanı kaldır, beyaz arkaplana kompozit et ve JPG kaydet."""
         if not os.path.exists(input_path):
             raise RuntimeError(f"Giriş dosyası bulunamadı: {input_path}")
+        
+        if replicate is None:
+            raise RuntimeError("Replicate paketi yüklenemedi. Lütfen 'pip install replicate' komutunu çalıştırın.")
 
         # 1) Replicate'a gönderim: local dosyayı upload edip URL elde et
         # Replicate Python SDK, dosya path'ini doğrudan input olarak destekler.
