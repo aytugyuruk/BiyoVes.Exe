@@ -146,17 +146,18 @@ class UserCreditsManager:
         return digest[:self.SIGNATURE_LENGTH].upper()
 
     def _parse_key(self, key_str: str) -> Tuple[bool, int, str, str]:
-        """Key'i parçala: AMOUNT-TOKEN-SIGN. Başarısızsa (False,0,'','')."""
+        """Key'i parçala: PREFIX-AMOUNT-TOKEN. Başarısızsa (False,0,'','')."""
         key_str = (key_str or "").strip().upper()
         # Örnek formatlar:
-        # 10-ABC123-AB12CD34EF  veya  25-XYZ999-1A2B3C4D5E
-        m = re.match(r"^(\d+)-([A-Z0-9]{3,12})-([A-Z0-9]{8,12})$", key_str)
+        # PK5-HT3M6P  veya  PK200-LS6Q2H
+        m = re.match(r"^([A-Z]+)(\d+)-([A-Z0-9]{6,12})$", key_str)
         if not m:
             return False, 0, "", ""
-        amount = int(m.group(1))
-        token = m.group(2)
-        sign = m.group(3)
-        return True, amount, token, sign
+        prefix = m.group(1)
+        amount = int(m.group(2))
+        token = m.group(3)
+        # Signature yok, sadece prefix kontrolü yap
+        return True, amount, token, prefix
 
     def redeem_key(self, key_str: str) -> Tuple[bool, str, int]:
         """Key doğrula ve krediyi ekle. (success, message, added_credits)"""
@@ -198,18 +199,17 @@ class UserCreditsManager:
                 # Sunucu erişilemez - offline fallback'a geç
                 self.logger.error(f"Sunucu doğrulama hatası: {e}")
 
-        # İmzalı (dinamik) key formatını dene
-        ok, amount, token, sign = self._parse_key(key_str)
+        # PREFIX-AMOUNT-TOKEN formatını dene
+        ok, amount, token, prefix = self._parse_key(key_str)
         if not ok:
             return False, "Anahtar bulunamadı veya formatı geçersiz.", 0
 
         if amount <= 0:
             return False, "Anahtar tutarı geçersiz.", 0
 
-        # User ID'yi kullanmadan imza kontrol et (evrensel anahtar için)
-        expected = self._compute_signature(amount, token, "")
-        if expected != sign:
-            return False, "Anahtar doğrulanamadı. Formatı hatalı veya geçersiz.", 0
+        # Prefix kontrolü (sadece PK kabul et)
+        if prefix != "PK":
+            return False, "Anahtar prefix'i geçersiz. Sadece PK anahtarları kabul edilir.", 0
 
         # Başarılı: krediyi ekle, kaydet ve key'i işaretle
         self.user_data["credits"] = self.get_remaining_credits() + amount
