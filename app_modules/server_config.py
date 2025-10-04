@@ -1,16 +1,12 @@
 # Sunucu tabanlı key doğrulama yapılandırması.
 import os
-from dotenv import load_dotenv
-
-# .env dosyasını yükle
-load_dotenv()
 
 # Sunucu kullanımı
 USE_SERVER = True
 
 # API tabanı
 # Supabase Project REST base URL (RPC ile web üzerinden çağrı)
-API_BASE_URL = os.getenv("SUPABASE_URL", "https://xitttgvzylhqawsjzhcr.supabase.co")
+API_BASE_URL = "https://xitttgvzylhqawsjzhcr.supabase.co"
 
 # Uç noktalar
 # REST RPC endpoint (redeem SQL fonksiyonu)

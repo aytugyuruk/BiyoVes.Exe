@@ -3,7 +3,6 @@ import io
 from PIL import Image
 from typing import Optional, Tuple
 import requests
-from dotenv import load_dotenv
 
 # Replicate import with fallback
 try:
