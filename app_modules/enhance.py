@@ -163,36 +163,3 @@ def apply_unsharp_mask(image: Image.Image, radius: float = 1.0, amount: float = 
 #     result = cv2.addWeighted(image, 0.7, sharpened, 0.3, 0)
 #     return result
 
-
-if __name__ == "__main__":
-    # Test için
-    input_file = "input.jpg" # Lütfen bu dosyayı projenizin olduğu klasöre koyun
-    
-    # Test dosyası oluştur (eğer yoksa)
-    if not os.path.exists(input_file):
-        print(f"'{input_file}' dosyası bulunamadı. Test için örnek bir resim oluşturuluyor...")
-        img_width, img_height = 800, 600
-        test_image = Image.new('RGB', (img_width, img_height), color = 'gray')
-        
-        # Basit bir desen ekleyelim
-        for y in range(0, img_height, 20):
-            for x in range(0, img_width, 20):
-                color = (x % 255, y % 255, (x+y) % 255)
-                ImageDraw.Draw(test_image).rectangle([(x, y), (x+10, y+10)], fill=color)
-
-        test_image.save(input_file)
-        print(f"'{input_file}' başarıyla oluşturuldu.")
-        
-    try:
-        # Doğal rötuş fonksiyonunu çağır
-        output_file = auto_enhance_image(input_file, 
-                                         contrast_factor=1.05, # Çok hafif kontrast artırma
-                                         brightness_factor=1.02, # Çok hafif parlaklık artırma
-                                         sharpness_radius=0.5,  # Daha yumuşak netlik yarıçapı
-                                         sharpness_amount=0.3)  # Çok hafif netlik miktarı
-        print(f"Test tamamlandı. İşlenmiş görüntü: {output_file}")
-    except NameError:
-        print("PIL.ImageDraw modülü eksik. Lütfen 'ImageDraw' importunu ekleyin veya test_image oluşturma kısmını pas geçin.")
-        print("pip install Pillow komutunu çalıştırarak Pillow kütüphanesini yüklediğinizden emin olun.")
-    except Exception as e:
-        print(f"Ana test bloğunda hata oluştu: {e}")

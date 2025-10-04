@@ -19,11 +19,16 @@ from app_modules.duzen import (
 	create_image_layout_2lu_biyometrik,
 	create_image_layout_2lu_vesikalik,
 )
-from app_modules.enhance import enhance_image, natural_enhance_image, auto_enhance_image
+from app_modules.enhance import natural_enhance_image
 from app_modules.user_credits import credits_manager
 
 
 class App:
+	# Sabitler
+	TARGET_WIDTH_10x15 = 1181   # 10 cm * 300 DPI / 2.54
+	TARGET_HEIGHT_10x15 = 1772  # 15 cm * 300 DPI / 2.54
+	TOP_MARGIN_10x15 = 118      # 1 cm * 300 DPI / 2.54 (üstten boşluk)
+	
 	def __init__(self, root: Tk):
 		self.root = root
 		self.root.title("Vesikalık/Biyometrik Hazırlayıcı")
@@ -40,7 +45,6 @@ class App:
 		self.bg_remover = None
 		self._models_loading = False
 		self._models_loaded = False
-		self._loading_progress = 0
 
 		self._build_ui()
 		
@@ -91,12 +95,12 @@ class App:
 		self.process_button = Button(actions, text="İşle", command=self.process_async, state="disabled")
 		self.process_button.pack(side=LEFT)
 
-		# Model yükleme durumu
-		self.model_status_label = Label(self.root, text="AI modelleri yükleniyor...", anchor="w", fg="blue")
+		# AI servis durumu
+		self.model_status_label = Label(self.root, text="AI servisleri başlatılıyor...", anchor="w", fg="blue")
 		self.model_status_label.pack(fill=X, padx=10, pady=(0, 5))
 		
 		# Ana durum etiketi
-		self.status_label = Label(self.root, text="Modeller yükleniyor...", anchor="w")
+		self.status_label = Label(self.root, text="API bağlantıları kontrol ediliyor...", anchor="w")
 		self.status_label.pack(fill=X, padx=10, pady=(0, 8))
 		
 		# Kredi bilgisi etiketi
@@ -178,34 +182,33 @@ class App:
 		threading.Thread(target=self._load_models_async, daemon=True).start()
 	
 	def _load_models_async(self) -> None:
-		"""Modelleri arkaplanda yükle"""
+		"""AI servislerini başlat"""
 		try:
-			self.set_model_status("🔄 Arkaplan kaldırma modeli yükleniyor...")
-			self.set_status("AI modelleri başlatılıyor...")
+			self.set_model_status("🔄 AI servisleri başlatılıyor...")
+			self.set_status("API bağlantıları kontrol ediliyor...")
 			
-			# 1. Arkaplan kaldırma modeli
-			print("🔄 ModNetBGRemover oluşturuluyor...")
+			# 1. Arkaplan kaldırma servisi (Replicate API)
+			print("🔄 Replicate API bağlantısı kontrol ediliyor...")
 			self.bg_remover = ModNetBGRemover()
-			self._loading_progress = 100
 			
-			# Başarılı yükleme
+			# Başarılı başlatma
 			self._models_loaded = True
 			self._models_loading = False
 			
-			self.set_model_status("✅ Tüm modeller yüklendi!")
+			self.set_model_status("✅ AI servisleri hazır!")
 			self.set_status("Hazır - Fotoğraf seçebilirsiniz")
 			self._enable_all_buttons()
 			
-			print("✅ Tüm modeller başarıyla yüklendi")
+			print("✅ AI servisleri başarıyla başlatıldı")
 			
 		except Exception as e:
-			print(f"❌ Model yükleme hatası: {e}")
+			print(f"❌ AI servis başlatma hatası: {e}")
 			import traceback
 			traceback.print_exc()
 			
 			self._models_loading = False
-			self.set_model_status(f"❌ Model yükleme hatası: {e}")
-			self.set_status("Model yükleme başarısız - Uygulamayı yeniden başlatın")
+			self.set_model_status(f"❌ AI servis başlatma hatası: {e}")
+			self.set_status("API bağlantısı başarısız - Uygulamayı yeniden başlatın")
 			
 			# Hata durumunda da butonları aktif et (kullanıcı deneyebilsin)
 			self._enable_all_buttons()
@@ -227,6 +230,17 @@ class App:
 		self.enable_retouch = not self.enable_retouch
 		status = "Açık" if self.enable_retouch else "Kapalı"
 		print(f"Rotüş: {status}")
+	
+	def _apply_retouch(self, output_path: str) -> None:
+		"""Rötuş uygula (eğer etkinse)"""
+		if not self.enable_retouch:
+			return
+		
+		self.set_status("Doğal rötuş yapılıyor...")
+		enhanced_path = natural_enhance_image(output_path)
+		if enhanced_path != output_path and os.path.exists(enhanced_path):
+			os.remove(output_path)
+			os.rename(enhanced_path, output_path)
 
 	def _enable_all_buttons(self) -> None:
 		"""Tüm butonları aktif et"""
@@ -240,16 +254,16 @@ class App:
 		self.process_button.config(state="normal")
 
 	def _ensure_models_loaded(self) -> bool:
-		"""Modellerin yüklü olduğundan emin ol"""
+		"""AI servislerinin hazır olduğundan emin ol"""
 		if self._models_loaded and self.bg_remover is not None:
 			return True
 		
 		if self._models_loading:
-			self.set_status("Modeller hala yükleniyor, lütfen bekleyin...")
+			self.set_status("AI servisleri hala başlatılıyor, lütfen bekleyin...")
 			return False
 		
-		# Modeller yüklenmemişse hata
-		self.set_status("Modeller yüklenmemiş - Uygulamayı yeniden başlatın")
+		# AI servisleri hazır değilse hata
+		self.set_status("AI servisleri hazır değil - Uygulamayı yeniden başlatın")
 		return False
 
 	def choose_file(self) -> None:
@@ -287,7 +301,7 @@ class App:
 			return
 		
 		if not self._models_loaded:
-			messagebox.showwarning("Uyarı", "AI modelleri henüz yüklenmedi. Lütfen bekleyin.")
+			messagebox.showwarning("Uyarı", "AI servisleri henüz hazır değil. Lütfen bekleyin.")
 			return
 		
 		# Kredi kontrolü
@@ -319,9 +333,9 @@ class App:
 			self.root.after(0, lambda: self.process_button.config(state="normal", text="İşle"))
 
 	def _process_pipeline(self) -> None:
-		# Önce modellerin yüklü olduğundan emin ol
+		# Önce AI servislerinin hazır olduğundan emin ol
 		if not self._ensure_models_loaded():
-			raise RuntimeError("AI modelleri yüklenemedi")
+			raise RuntimeError("AI servisleri hazır değil")
 		
 		selection = self.type_selection.get()
 		layout_choice = self.count_selection.get()  # "2li" or "4lu"
@@ -330,9 +344,6 @@ class App:
 		name, _ext = os.path.splitext(filename)
 		
 		# 10x15 cm boyutları (300 DPI'da)
-		TARGET_WIDTH_10x15 = 1181   # 10 cm * 300 DPI / 2.54
-		TARGET_HEIGHT_10x15 = 1772  # 15 cm * 300 DPI / 2.54
-		TOP_MARGIN_10x15 = 118      # 1 cm * 300 DPI / 2.54 (üstten boşluk)
 
 		self.set_status("Arkaplan kaldırılıyor (MODNet)...")
 		# Yeni sürüm: remove_background beyaz arkaplan ile JPEG kaydeder (geçici olarak kullanıp sileceğiz)
@@ -373,8 +384,8 @@ class App:
 				aspect_ratio = w / h
 				
 				# Kullanılabilir alan: genişlik tam, yükseklik üstten 1cm boşluk
-				available_width = TARGET_WIDTH_10x15
-				available_height = TARGET_HEIGHT_10x15 - TOP_MARGIN_10x15
+				available_width = self.TARGET_WIDTH_10x15
+				available_height = self.TARGET_HEIGHT_10x15 - self.TOP_MARGIN_10x15
 				target_aspect = available_width / available_height
 				
 				# Fotoğrafı sayfayı tam doldurmak için kırp ve büyüt
@@ -412,10 +423,10 @@ class App:
 					resized = cv2.resize(resized, (available_width, available_height), interpolation=cv2.INTER_LANCZOS4)
 				
 				# 10x15 cm boyutunda beyaz arkaplan oluştur
-				final_image = np.full((TARGET_HEIGHT_10x15, TARGET_WIDTH_10x15, 3), 255, dtype=np.uint8)
+				final_image = np.full((self.TARGET_HEIGHT_10x15, self.TARGET_WIDTH_10x15, 3), 255, dtype=np.uint8)
 				
 				# Üstten 1cm boşluk bırakarak yerleştir, sayfayı tam doldur
-				start_y = TOP_MARGIN_10x15
+				start_y = self.TOP_MARGIN_10x15
 				start_x = 0
 				
 				# Final görüntüye yerleştir (artık tam boyutta)
@@ -425,14 +436,8 @@ class App:
 				final_output_path = os.path.join(base_dir, f"{name}_10x15cm.jpg")
 				cv2.imwrite(final_output_path, final_image, [cv2.IMWRITE_JPEG_QUALITY, 100])
 				
-				# Rotüş yapılıp yapılmayacağını kontrol et
-				if self.enable_retouch:
-					self.set_status("Doğal rötuş yapılıyor...")
-					enhanced_path = natural_enhance_image(final_output_path)
-					# Orijinal dosyayı sil ve enhanced versiyonu final yap
-					if enhanced_path != final_output_path and os.path.exists(enhanced_path):
-						os.remove(final_output_path)
-						os.rename(enhanced_path, final_output_path)
+				# Rotüş uygula
+				self._apply_retouch(final_output_path)
 						
 			elif selection == "biyometrik":
 				# Biyometrik kırpma oluştur (geçici dosya) ve yerleşim fonksiyonuna bellekten ver
@@ -455,13 +460,8 @@ class App:
 					final_output_path = os.path.join(base_dir, f"{name}_5x15_biyometrik.jpg")
 					create_image_layout_2lu_biyometrik(cropped_bgr, final_output_path)
 				
-				# Rotüş yapılıp yapılmayacağını kontrol et
-				if self.enable_retouch:
-					self.set_status("Doğal rötuş yapılıyor...")
-					enhanced_path = natural_enhance_image(final_output_path)
-					if enhanced_path != final_output_path and os.path.exists(enhanced_path):
-						os.remove(final_output_path)
-						os.rename(enhanced_path, final_output_path)
+				# Rotüş uygula
+				self._apply_retouch(final_output_path)
 			else:
 				# Vesikalık kırpma oluştur (geçici dosya) ve yerleşim fonksiyonuna bellekten ver
 				fd, temp_cropped_path = tempfile.mkstemp(suffix="_cropped_vesikalik.jpg")
@@ -483,13 +483,8 @@ class App:
 					final_output_path = os.path.join(base_dir, f"{name}_5x15_vesikalik.jpg")
 					create_image_layout_2lu_vesikalik(cropped_bgr, final_output_path)
 				
-				# Rotüş yapılıp yapılmayacağını kontrol et
-				if self.enable_retouch:
-					self.set_status("Doğal rötuş yapılıyor...")
-					enhanced_path = natural_enhance_image(final_output_path)
-					if enhanced_path != final_output_path and os.path.exists(enhanced_path):
-						os.remove(final_output_path)
-						os.rename(enhanced_path, final_output_path)
+				# Rotüş uygula
+				self._apply_retouch(final_output_path)
 		finally:
 			# remove_background çıktısını temizle (sadece final dosya kalsın)
 			try:

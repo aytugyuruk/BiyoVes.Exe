@@ -4,6 +4,7 @@ import uuid
 import re
 import hashlib
 import requests
+import logging
 from typing import Dict, Any, Tuple
 from pathlib import Path
 
@@ -11,18 +12,19 @@ from pathlib import Path
 class UserCreditsManager:
     """Kullanıcı kredilerini yöneten sınıf - AppData'da saklar"""
     
+    # Sabitler
+    SIGNATURE_LENGTH = 10
+    DEFAULT_CREDITS = 5
+    
     def __init__(self):
+        # Logging yapılandırması
+        self.logger = logging.getLogger(__name__)
+        
         # DİKKAT: Bu SALT, key üretim tarafında da kullanılmalıdır
         self._SECRET_SALT = "BIOYOVES_SECRET_V1"
         self.app_name = "BiyoVes"
         self.credits_file = self._get_credits_file_path()
         self.user_data = self._load_or_create_user_data()
-        # Sabit key listesi (opsiyonel)
-        try:
-            from .fixed_keys import FIXED_KEYS  # type: ignore
-            self.fixed_keys = FIXED_KEYS
-        except Exception:
-            self.fixed_keys = {}
         # Sunucu ayarları
         try:
             from .server_config import USE_SERVER, API_BASE_URL, REDEEM_ENDPOINT, REQUEST_TIMEOUT_SECONDS, SUPABASE_ANON_KEY  # type: ignore
@@ -31,7 +33,9 @@ class UserCreditsManager:
             self.redeem_endpoint = REDEEM_ENDPOINT
             self.request_timeout = REQUEST_TIMEOUT_SECONDS
             self.supabase_anon_key = SUPABASE_ANON_KEY
-        except Exception:
+            self.logger.info("Sunucu yapılandırması başarıyla yüklendi")
+        except (ImportError, AttributeError) as e:
+            self.logger.warning(f"Sunucu yapılandırması yüklenemedi: {e}")
             self.server_enabled = False
             self.api_base_url = ""
             self.redeem_endpoint = ""
@@ -63,12 +67,14 @@ class UserCreditsManager:
                     return data
             except (json.JSONDecodeError, IOError):
                 # Dosya bozuksa yeni oluştur
-                return self._create_new_user_data(5)
+                return self._create_new_user_data(self.DEFAULT_CREDITS)
         else:
-            # İlk kez açılıyor - 5 ücretsiz hak ver
-            return self._create_new_user_data(5)
+            # İlk kez açılıyor - ücretsiz hak ver
+            return self._create_new_user_data(self.DEFAULT_CREDITS)
     
-    def _create_new_user_data(self, initial_credits: int = 5) -> Dict[str, Any]:
+    def _create_new_user_data(self, initial_credits: int = None) -> Dict[str, Any]:
+        if initial_credits is None:
+            initial_credits = self.DEFAULT_CREDITS
         """Yeni kullanıcı verisi oluştur"""
         return {
             "user_id": str(uuid.uuid4()),
@@ -91,7 +97,7 @@ class UserCreditsManager:
             with open(self.credits_file, 'w', encoding='utf-8') as f:
                 json.dump(self.user_data, f, indent=2, ensure_ascii=False)
         except IOError as e:
-            print(f"Kullanıcı verileri kaydedilemedi: {e}")
+            self.logger.error(f"Kullanıcı verileri kaydedilemedi: {e}")
     
     def get_remaining_credits(self) -> int:
         """Kalan kredi sayısını döndür"""
@@ -130,20 +136,13 @@ class UserCreditsManager:
             "user_id": self.user_data.get("user_id", "Bilinmiyor")
         }
     
-    def reset_credits_for_testing(self, credits: int = 5) -> None:
-        """Test için kredileri sıfırla"""
-        self.user_data["credits"] = credits
-        self.user_data["total_used"] = 0
-        self.user_data["last_used_date"] = None
-        self._save_user_data()
-        print(f"Test için krediler sıfırlandı: {credits} kredi")
 
     # --- Key Doğrulama ve Kullanım (Redeem) ---
     def _compute_signature(self, amount: int, token: str, user_id: str) -> str:
         """Key imzasını üret (hex kısaltılmış)."""
         payload = f"{amount}:{token}:{user_id}:{self._SECRET_SALT}".encode("utf-8")
         digest = hashlib.sha256(payload).hexdigest()
-        return digest[:10].upper()
+        return digest[:self.SIGNATURE_LENGTH].upper()
 
     def _parse_key(self, key_str: str) -> Tuple[bool, int, str, str]:
         """Key'i parçala: AMOUNT-TOKEN-SIGN. Başarısızsa (False,0,'','')."""
@@ -196,20 +195,9 @@ class UserCreditsManager:
                     pass
             except Exception as e:
                 # Sunucu erişilemez - offline fallback'a geç
-                print(f"Sunucu doğrulama hatası: {e}")
+                self.logger.error(f"Sunucu doğrulama hatası: {e}")
 
-        # 1) Sabit key listesinde var mı?
-        if key_str in self.fixed_keys:
-            amount = int(self.fixed_keys[key_str])
-            if amount <= 0:
-                return False, "Anahtar tutarı geçersiz.", 0
-            self.user_data["credits"] = self.get_remaining_credits() + amount
-            used_keys.append(key_str)
-            self.user_data["redeemed_keys"] = used_keys
-            self._save_user_data()
-            return True, f"{amount} hak eklendi!", amount
-
-        # 2) İmzalı (dinamik) key formatını dene
+        # İmzalı (dinamik) key formatını dene
         ok, amount, token, sign = self._parse_key(key_str)
         if not ok:
             return False, "Anahtar bulunamadı veya formatı geçersiz.", 0

@@ -248,27 +248,3 @@ def create_smart_vesikalik_photo(input_path, output_path):
     print(f"💾 Saved to: {output_path}")
     
     return True
-
-def main():
-    INPUT_IMAGE = "/Users/aytug/Desktop/BiyoVes/IMG_4100.jpg"
-    OUTPUT_IMAGE = "vesikalik_smart.jpg"
-    
-    if not os.path.exists(INPUT_IMAGE):
-        print(f"❌ Input image not found: {INPUT_IMAGE}")
-        return False
-    
-    try:
-        create_smart_vesikalik_photo(INPUT_IMAGE, OUTPUT_IMAGE)
-        return True
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-if __name__ == "__main__":
-    success = main()
-    if success:
-        print("\n🎉 Process completed successfully!")
-    else:
-        print("\n💥 Process failed.")

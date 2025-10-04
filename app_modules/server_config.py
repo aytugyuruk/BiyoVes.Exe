@@ -1,15 +1,16 @@
-"""
-Sunucu tabanlı key doğrulama yapılandırması.
+# Sunucu tabanlı key doğrulama yapılandırması.
+import os
+from dotenv import load_dotenv
 
-USE_SERVER True ise, client key doğrulamada önce sunucuya sorar.
-"""
+# .env dosyasını yükle
+load_dotenv()
 
 # Sunucu kullanımı
 USE_SERVER = True
 
-# API tabanı (örnek)
+# API tabanı
 # Supabase Project REST base URL (RPC ile web üzerinden çağrı)
-API_BASE_URL = "https://xitttgvzylhqawsjzhcr.supabase.co"
+API_BASE_URL = os.getenv("SUPABASE_URL", "https://xitttgvzylhqawsjzhcr.supabase.co")
 
 # Uç noktalar
 # REST RPC endpoint (redeem SQL fonksiyonu)
@@ -18,8 +19,12 @@ REDEEM_ENDPOINT = "/rest/v1/rpc/redeem"
 # İsteğe bağlı: zaman aşımı (saniye)
 REQUEST_TIMEOUT_SECONDS = 10
 
-# Supabase anon public key (yalnızca RPC için; service role kullanılmaz)
-# Kullanıcı tarafından sağlandı
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpdHR0Z3Z6eWxocWF3c2p6aGNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1NzA3NDcsImV4cCI6MjA3MzE0Njc0N30.6doY15NIXi51fINOWU46RSnlC_LGDzX2xfAEYDJs-yg"
+# Supabase anon public key (.env dosyasından oku)
+# Güvenlik için .env dosyasında SUPABASE_ANON_KEY olarak tanımlayın
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+
+# Yapılandırma doğrulaması
+if not SUPABASE_ANON_KEY:
+    print("UYARI: SUPABASE_ANON_KEY .env dosyasında bulunamadı!")
 
 
