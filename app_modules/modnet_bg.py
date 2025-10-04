@@ -22,6 +22,10 @@ class ModNetBGRemover:
         # API key'i doğrudan kod içinde tanımla - hazır exe için
         self._replicate_token = "r8_BgRKXf2yoIe3XTQjRp8fpLvggXrUCTf4LDGg6"
         
+        # Replicate için environment variable set et
+        if replicate is not None:
+            os.environ["REPLICATE_API_TOKEN"] = self._replicate_token
+        
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
         """Replicate API ile arkaplanı kaldır, beyaz arkaplana kompozit et ve JPG kaydet."""
         if not os.path.exists(input_path):
