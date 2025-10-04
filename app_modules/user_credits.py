@@ -140,7 +140,8 @@ class UserCreditsManager:
     # --- Key Doğrulama ve Kullanım (Redeem) ---
     def _compute_signature(self, amount: int, token: str, user_id: str) -> str:
         """Key imzasını üret (hex kısaltılmış)."""
-        payload = f"{amount}:{token}:{user_id}:{self._SECRET_SALT}".encode("utf-8")
+        # User ID'yi kullanmadan imza üret (evrensel anahtar için)
+        payload = f"{amount}:{token}:{self._SECRET_SALT}".encode("utf-8")
         digest = hashlib.sha256(payload).hexdigest()
         return digest[:self.SIGNATURE_LENGTH].upper()
 
@@ -205,10 +206,10 @@ class UserCreditsManager:
         if amount <= 0:
             return False, "Anahtar tutarı geçersiz.", 0
 
-        user_id = self.user_data.get("user_id", "")
-        expected = self._compute_signature(amount, token, user_id)
+        # User ID'yi kullanmadan imza kontrol et (evrensel anahtar için)
+        expected = self._compute_signature(amount, token, "")
         if expected != sign:
-            return False, "Anahtar doğrulanamadı. Kullanıcıya ait değil veya hatalı.", 0
+            return False, "Anahtar doğrulanamadı. Formatı hatalı veya geçersiz.", 0
 
         # Başarılı: krediyi ekle, kaydet ve key'i işaretle
         self.user_data["credits"] = self.get_remaining_credits() + amount
