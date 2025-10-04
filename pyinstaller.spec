@@ -8,8 +8,6 @@ project_root = os.path.abspath('.')
 # Data files to include
 datas = [
     ('haarcascade_frontalface_default.xml', '.'),
-    # Replicate paketini data olarak da ekle
-    ('replicate', 'replicate'),
 ]
 
 # Hidden imports
@@ -49,6 +47,19 @@ hiddenimports = [
     'replicate.api_resources',
     'replicate.types',
     'replicate.utils',
+    'replicate.constants',
+    'replicate.environment',
+    'replicate.errors',
+    'replicate.metadata',
+    'replicate.operations',
+    'replicate.resources',
+    'replicate.schemas',
+    'replicate.types',
+    'replicate.utils',
+    'replicate._base_client',
+    'replicate._client',
+    'replicate._types',
+    'replicate._utils',
     'importlib.metadata',
     'importlib.metadata._adapters',
     'importlib.metadata._collections',
