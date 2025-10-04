@@ -10,7 +10,7 @@ datas = [
     ('haarcascade_frontalface_default.xml', '.'),
 ]
 
-# Hidden imports - minimal set
+# Hidden imports - replicate için gerekli modüller
 hiddenimports = [
     'cv2',
     'PIL',
@@ -21,8 +21,24 @@ hiddenimports = [
     'tkinter.messagebox',
     'tkinter.ttk',
     'replicate',
+    'replicate.__about__',
+    'replicate.client',
     'importlib.metadata',
+    'importlib.metadata._adapters',
+    'importlib.metadata._collections',
+    'importlib.metadata._compat',
+    'importlib.metadata._functools',
+    'importlib.metadata._itertools',
+    'importlib.metadata._meta',
+    'importlib.metadata._text',
+    'importlib.metadata._typing',
+    'importlib.metadata._zip',
     'pkg_resources',
+    'setuptools',
+    'packaging',
+    'packaging.version',
+    'packaging.specifiers',
+    'packaging.requirements',
 ]
 
 a = Analysis(

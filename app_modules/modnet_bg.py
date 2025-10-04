@@ -4,8 +4,11 @@ from PIL import Image
 from typing import Optional, Tuple
 import requests
 
-# Lazy import - sadece gerektiğinde yükle
-replicate = None
+# importlib.metadata sorununu çözmek için environment variable set et
+os.environ['PIP_DISABLE_PIP_VERSION_CHECK'] = '1'
+
+# Direkt import - AI servisine bağlan
+import replicate
 
 
 class ModNetBGRemover:
@@ -24,15 +27,7 @@ class ModNetBGRemover:
         os.environ["REPLICATE_API_TOKEN"] = self._replicate_token
         print(f"🔑 API Token set edildi: {self._replicate_token[:10]}...")
         
-        # Lazy import - sadece gerektiğinde yükle
-        global replicate
-        if replicate is None:
-            try:
-                import replicate
-                print("✅ Replicate modülü yüklendi")
-            except ImportError as e:
-                print(f"❌ Replicate modülü yüklenemedi: {e}")
-                raise RuntimeError("Replicate paketi yüklenemedi")
+        print("✅ Replicate modülü hazır")
         
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
         """Replicate API ile arkaplanı kaldır, beyaz arkaplana kompozit et ve JPG kaydet."""
