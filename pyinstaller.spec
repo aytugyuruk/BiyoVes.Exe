@@ -8,6 +8,8 @@ project_root = os.path.abspath('.')
 # Data files to include
 datas = [
     ('haarcascade_frontalface_default.xml', '.'),
+    # Replicate paketini data olarak da ekle
+    ('replicate', 'replicate'),
 ]
 
 # Hidden imports

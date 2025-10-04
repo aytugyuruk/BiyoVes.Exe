@@ -4,14 +4,43 @@ from PIL import Image
 from typing import Optional, Tuple
 import requests
 
-# Replicate import with fallback
+# Replicate import with multiple fallback methods
+replicate = None
+
+# Method 1: Normal import
 try:
     import replicate
-    print("✅ Replicate paketi başarıyla yüklendi")
+    print("✅ Replicate paketi başarıyla yüklendi (Method 1)")
 except ImportError as e:
-    print(f"❌ Replicate import hatası: {e}")
-    print("PyInstaller ile replicate paketi bulunamadı")
-    replicate = None
+    print(f"❌ Method 1 failed: {e}")
+    
+    # Method 2: Importlib ile dene
+    try:
+        import importlib
+        replicate = importlib.import_module('replicate')
+        print("✅ Replicate paketi başarıyla yüklendi (Method 2)")
+    except ImportError as e2:
+        print(f"❌ Method 2 failed: {e2}")
+        
+        # Method 3: Manual module loading
+        try:
+            import sys
+            import os
+            # PyInstaller'da paket yolu
+            if hasattr(sys, '_MEIPASS'):
+                # PyInstaller bundle içinde
+                replicate_path = os.path.join(sys._MEIPASS, 'replicate')
+                if os.path.exists(replicate_path):
+                    sys.path.insert(0, replicate_path)
+                    import replicate
+                    print("✅ Replicate paketi başarıyla yüklendi (Method 3)")
+                else:
+                    print("❌ Method 3: Replicate path bulunamadı")
+            else:
+                print("❌ Method 3: PyInstaller bundle değil")
+        except Exception as e3:
+            print(f"❌ Method 3 failed: {e3}")
+            replicate = None
 
 
 class ModNetBGRemover:
@@ -24,9 +53,15 @@ class ModNetBGRemover:
         # API key'i doğrudan kod içinde tanımla - hazır exe için
         self._replicate_token = "r8_BgRKXf2yoIe3XTQjRp8fpLvggXrUCTf4LDGg6"
         
-        # Replicate için environment variable set et
+        # Replicate için environment variable set et (her durumda)
+        os.environ["REPLICATE_API_TOKEN"] = self._replicate_token
+        print(f"🔑 API Token set edildi: {self._replicate_token[:10]}...")
+        
+        # Replicate durumunu kontrol et
         if replicate is not None:
-            os.environ["REPLICATE_API_TOKEN"] = self._replicate_token
+            print("✅ Replicate modülü hazır")
+        else:
+            print("❌ Replicate modülü bulunamadı")
         
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
         """Replicate API ile arkaplanı kaldır, beyaz arkaplana kompozit et ve JPG kaydet."""
