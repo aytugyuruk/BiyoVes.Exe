@@ -20,14 +20,8 @@ class ModNetBGRemover:
     """
 
     def __init__(self, ckpt_path: Optional[str] = None):
-        # Yerel model yerine Replicate API kullanacağız; .env yükle
-        try:
-            load_dotenv()
-        except Exception:
-            pass
-        self._replicate_token = os.environ.get("REPLICATE_API_TOKEN", "").strip()
-        if not self._replicate_token:
-            raise RuntimeError("REPLICATE_API_TOKEN bulunamadı. Lütfen .env içine ekleyin.")
+        # API key'i doğrudan kod içinde tanımla - hazır exe için
+        self._replicate_token = "r8_BgRKXf2yoIe3XTQjRp8fpLvggXrUCTf4LDGg6"
         
     def remove_background(self, input_path: str, output_path: Optional[str] = None, bg: Tuple[int, int, int] = (255, 255, 255)) -> str:
         """Replicate API ile arkaplanı kaldır, beyaz arkaplana kompozit et ve JPG kaydet."""
