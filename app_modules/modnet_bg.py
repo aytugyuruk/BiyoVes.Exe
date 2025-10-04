@@ -7,8 +7,10 @@ import requests
 # Replicate import with fallback
 try:
     import replicate
+    print("✅ Replicate paketi başarıyla yüklendi")
 except ImportError as e:
-    print(f"Replicate import hatası: {e}")
+    print(f"❌ Replicate import hatası: {e}")
+    print("PyInstaller ile replicate paketi bulunamadı")
     replicate = None
 
 
