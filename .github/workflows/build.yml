@@ -32,11 +32,6 @@ jobs:
           pip install -r requirements.txt
           pip install --no-cache-dir --force-reinstall PySide6
       
-      - name: Install Visual Studio Build Tools
-        run: |
-          choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64" -y
-          choco install windows-sdk-10.0 -y
-      
       - name: Verify files exist
         run: |
           echo "Checking required files..."
@@ -64,6 +59,8 @@ jobs:
             --hidden-import=PySide6.QtWidgets `
             --hidden-import=PySide6.QtGui `
             --collect-all=PySide6 `
+            --clean `
+            --noconfirm `
             desktop_app.py
       
       - name: Check build output
