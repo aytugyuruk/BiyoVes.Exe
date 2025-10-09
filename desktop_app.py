@@ -173,7 +173,8 @@ class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("BiyoVes - Vesikalık & Biyometrik")
-        self.root.geometry("550x650")
+        self.root.geometry("700x800")
+        self.root.minsize(650, 750)  # Minimum boyut
         self.root.configure(bg='#212121')
         
         # Variables
