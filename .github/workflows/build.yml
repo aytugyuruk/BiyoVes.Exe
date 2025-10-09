@@ -30,7 +30,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install nuitka
           pip install --no-cache-dir --force-reinstall PySide6
       
       - name: Install Visual Studio Build Tools
@@ -46,38 +45,36 @@ jobs:
           if (Test-Path "appicon.ico") { echo "✓ appicon.ico found" } else { echo "⚠ appicon.ico missing - build will continue without icon" }
           echo "Using Replicate API (no MODNet checkpoint needed)"
       
-      - name: Build with Nuitka
+      - name: Build with PyInstaller
         run: |
-          $iconParam = if (Test-Path "appicon.ico") { "--windows-icon-from-ico=appicon.ico" } else { "" }
-          python -m nuitka `
-            --standalone `
+          $iconParam = if (Test-Path "appicon.ico") { "--icon=appicon.ico" } else { "" }
+          pyinstaller `
             --onefile `
-            --enable-plugin=pyside6 `
-            --follow-imports `
+            --windowed `
+            --name="BiyoVes" `
             $iconParam `
-            --include-data-files=haarcascade_frontalface_default.xml=haarcascade_frontalface_default.xml `
-            --include-package=cv2 `
-            --include-package=PIL `
-            --include-package=numpy `
-            --include-package=requests `
-            --include-package=replicate `
-            --windows-console-mode=disable `
-            --company-name="BiyoVes" `
-            --product-name="BiyoVes" `
-            --file-version="1.0.0.0" `
-            --product-version="1.0.0" `
-            --file-description="BiyoVes Biometric Verification System" `
+            --add-data="haarcascade_frontalface_default.xml;." `
+            --add-data="app_modules;app_modules" `
+            --hidden-import=cv2 `
+            --hidden-import=PIL `
+            --hidden-import=numpy `
+            --hidden-import=requests `
+            --hidden-import=replicate `
+            --hidden-import=PySide6.QtCore `
+            --hidden-import=PySide6.QtWidgets `
+            --hidden-import=PySide6.QtGui `
+            --collect-all=PySide6 `
             desktop_app.py
       
       - name: Check build output
         run: |
           echo "Build output structure:"
-          Get-ChildItem -Path "desktop_app.dist" -Recurse | Format-Table -AutoSize
+          Get-ChildItem -Path "dist" -Recurse | Format-Table -AutoSize
       
       - name: Create release package
         run: |
           New-Item -ItemType Directory -Force -Path "release"
-          Copy-Item -Path "desktop_app.dist\*" -Destination "release\" -Recurse
+          Copy-Item -Path "dist\*" -Destination "release\" -Recurse
           if (Test-Path "README.md") { Copy-Item "README.md" "release\" }
           Compress-Archive -Path "release\*" -DestinationPath "BiyoVes-Windows.zip"
       
@@ -85,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BiyoVes-Windows-EXE
-          path: desktop_app.dist/desktop_app.exe
+          path: dist/BiyoVes.exe
           if-no-files-found: error
       
       - name: Upload full package
