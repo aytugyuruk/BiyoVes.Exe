@@ -186,7 +186,7 @@ def create_smart_vesikalik_photo(input_path, output_path):
     offset_y = target_head_top_y - scaled_head_top_y
     
     print(f"Scaled head top: ({scaled_head_top_x}, {scaled_head_top_y})")
-    print(f"Scaled face center: ({scaled_face_center_x}, y)")
+    print(f"Scaled face center: ({scaled_face_center_x}, {scaled_face_center_y})")
     print(f"Scaled chin: ({scaled_face_center_x}, {scaled_face_bottom_y})")
     print(f"Target head top: {target_head_top_y} (5mm from canvas top)")
     print(f"Positioning offsets: x={offset_x}, y={offset_y}")
