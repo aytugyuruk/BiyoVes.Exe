@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import os
+import sys
 from PyInstaller.utils.hooks import copy_metadata
 
 # Get the project root directory
@@ -11,19 +12,23 @@ datas = [
     ('haarcascade_frontalface_default.xml', '.'),
 ]
 
-# Replicate metadata dosyalarını dahil et (Windows için gerekli)
+# Metadata dosyalarını dahil et (Windows için gerekli)
 datas += copy_metadata('replicate')
+datas += copy_metadata('PySide6')
+datas += copy_metadata('shiboken6')
 
-# Hidden imports - replicate için gerekli modüller
+# Hidden imports - replicate ve PySide6 için gerekli modüller
 hiddenimports = [
     'cv2',
     'PIL',
     'numpy',
     'requests',
-    'tkinter',
-    'tkinter.filedialog',
-    'tkinter.messagebox',
-    'tkinter.ttk',
+    'PySide6',
+    'PySide6.QtCore',
+    'PySide6.QtGui',
+    'PySide6.QtWidgets',
+    'PySide6.QtSvg',
+    'PySide6.QtNetwork',
     'replicate',
     'replicate.__about__',
     'replicate.client',
@@ -71,7 +76,7 @@ exe = EXE(
     a.datas,
     [],
     name='BiyoVes',
-    icon=os.path.join(project_root, 'appicon.icns'),
+    icon=os.path.join(project_root, 'appicon.icns') if sys.platform == 'darwin' else os.path.join(project_root, 'appicon.ico'),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

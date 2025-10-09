@@ -25,6 +25,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
+        # PySide6 DLL'lerinin doğru yüklenmesi için
+        pip uninstall -y PySide6 shiboken6
+        pip install --no-cache-dir PySide6
 
     - name: Verify files exist
       run: |
