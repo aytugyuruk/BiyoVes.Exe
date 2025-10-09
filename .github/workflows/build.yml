@@ -30,7 +30,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install --no-cache-dir --force-reinstall PySide6
       
       - name: Verify files exist
         run: |
@@ -55,17 +54,10 @@ jobs:
             --hidden-import=numpy `
             --hidden-import=requests `
             --hidden-import=replicate `
-            --hidden-import=PySide6.QtCore `
-            --hidden-import=PySide6.QtWidgets `
-            --hidden-import=PySide6.QtGui `
-            --hidden-import=PySide6.QtOpenGL `
-            --hidden-import=PySide6.QtPrintSupport `
-            --collect-all=PySide6 `
-            --collect-all=PySide6.QtCore `
-            --collect-all=PySide6.QtWidgets `
-            --collect-all=PySide6.QtGui `
-            --collect-binaries=PySide6 `
-            --noupx `
+            --hidden-import=tkinter `
+            --hidden-import=tkinter.ttk `
+            --hidden-import=tkinter.filedialog `
+            --hidden-import=tkinter.messagebox `
             --clean `
             --noconfirm `
             desktop_app.py

@@ -4,13 +4,8 @@ import webbrowser
 import threading
 import traceback
 import tempfile
-from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QRadioButton, QFileDialog, QMessageBox, QCheckBox, QLineEdit, QButtonGroup,
-    QFrame
-)
-from PySide6.QtCore import Qt, QThread, QObject, Signal
-from PySide6.QtGui import QFont, QIcon
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
 import cv2
 import numpy as np
 
@@ -28,34 +23,29 @@ from app_modules.duzen import (
 from app_modules.enhance import natural_enhance_image
 from app_modules.user_credits import credits_manager
 
-class ModelLoaderWorker(QObject):
+class ModelLoaderWorker:
     """Worker to load AI models in a separate thread."""
-    finished = Signal(object)
-    error = Signal(str)
-    progress = Signal(str)
+    def __init__(self, callback):
+        self.callback = callback
 
     def run(self):
         try:
-            self.progress.emit("AI servisleri başlatılıyor...")
+            self.callback("progress", "AI servisleri başlatılıyor...")
             print("Replicate API bağlantısı kontrol ediliyor...")
             bg_remover = ModNetBGRemover()
-            self.finished.emit(bg_remover)
+            self.callback("finished", bg_remover)
             print("AI servisleri başarıyla başlatıldı")
         except Exception as e:
             error_msg = f"AI servis başlatma hatası: {e}"
             print(f"Hata: {error_msg}")
             traceback.print_exc()
-            self.error.emit(error_msg)
+            self.callback("error", error_msg)
 
-class ProcessingWorker(QObject):
+class ProcessingWorker:
     """Worker to process the image in a separate thread."""
-    finished = Signal(str, str)
-    error = Signal(str)
-    progress = Signal(str)
-
-    def __init__(self, app_instance):
-        super().__init__()
+    def __init__(self, app_instance, callback):
         self.app = app_instance
+        self.callback = callback
 
     def run(self):
         credits_manager.use_credit()
@@ -65,25 +55,25 @@ class ProcessingWorker(QObject):
             traceback.print_exc()
             credits_manager.add_credits(1)
             error_message = f"İşleme sırasında hata oluştu:\n{e}\n\nKrediniz geri verildi."
-            self.error.emit(error_message)
+            self.callback("error", error_message)
 
     def _process_pipeline(self) -> None:
         if not self.app.bg_remover:
             raise RuntimeError("AI servisleri hazır değil")
 
-        selection_text = self.app.type_selection_group.checkedButton().text()
+        selection_text = self.app.type_var.get()
         selection = "10x15" if "10x15" in selection_text else selection_text.lower()
         
-        layout_choice = "4lu" if self.app.fourlu_radio.isChecked() else "2li"
+        layout_choice = "4lu" if self.app.layout_var.get() == "4lu" else "2li"
         in_path = self.app.image_path
         base_dir, filename = os.path.split(in_path)
         name, _ = os.path.splitext(filename)
         
-        self.progress.emit("Arkaplan kaldırılıyor...")
+        self.callback("progress", "Arkaplan kaldırılıyor...")
         no_bg_path = self.app.bg_remover.remove_background(in_path)
         if no_bg_path is None: raise RuntimeError("Arkaplan kaldırılamadı")
 
-        self.progress.emit("Yüz merkezleniyor...")
+        self.callback("progress", "Yüz merkezleniyor...")
         img_bgr = cv2.imread(no_bg_path, cv2.IMREAD_COLOR)
         if img_bgr is None: raise RuntimeError("İşlenen görüntü okunamadı")
 
@@ -91,7 +81,7 @@ class ProcessingWorker(QObject):
         
         try:
             if selection == "10x15":
-                self.progress.emit("10x15 cm fotoğraf hazırlanıyor...")
+                self.callback("progress", "10x15 cm fotoğraf hazırlanıyor...")
                 fd, temp_path = tempfile.mkstemp(suffix=".jpg"); os.close(fd)
                 create_vesikalik(no_bg_path, temp_path)
                 cropped_bgr = cv2.imread(temp_path); os.remove(temp_path)
@@ -131,11 +121,11 @@ class ProcessingWorker(QObject):
                 if cropped_bgr is None: raise RuntimeError("Kırpılmış görüntü oluşturulamadı")
                 
                 if layout_choice == "4lu":
-                    self.progress.emit("4'lü biyometrik sayfa oluşturuluyor...")
+                    self.callback("progress", "4'lü biyometrik sayfa oluşturuluyor...")
                     final_output_path = os.path.join(base_dir, f"{name}_10x15_biyometrik.jpg")
                     create_image_layout(cropped_bgr, final_output_path)
                 else:
-                    self.progress.emit("2'li biyometrik şerit oluşturuluyor...")
+                    self.callback("progress", "2'li biyometrik şerit oluşturuluyor...")
                     final_output_path = os.path.join(base_dir, f"{name}_5x15_biyometrik.jpg")
                     create_image_layout_2lu_biyometrik(cropped_bgr, final_output_path)
             else: # Vesikalık
@@ -145,16 +135,16 @@ class ProcessingWorker(QObject):
                 if cropped_bgr is None: raise RuntimeError("Kırpılmış görüntü oluşturulamadı")
 
                 if layout_choice == "4lu":
-                    self.progress.emit("4'lü vesikalık sayfa oluşturuluyor...")
+                    self.callback("progress", "4'lü vesikalık sayfa oluşturuluyor...")
                     final_output_path = os.path.join(base_dir, f"{name}_10x15_vesikalik.jpg")
                     create_image_layout_vesikalik(cropped_bgr, final_output_path)
                 else:
-                    self.progress.emit("2'li vesikalık şerit oluşturuluyor...")
+                    self.callback("progress", "2'li vesikalık şerit oluşturuluyor...")
                     final_output_path = os.path.join(base_dir, f"{name}_5x15_vesikalik.jpg")
                     create_image_layout_2lu_vesikalik(cropped_bgr, final_output_path)
 
             if self.app.enable_retouch:
-                self.progress.emit("Doğal rötuş uygulanıyor...")
+                self.callback("progress", "Doğal rötuş uygulanıyor...")
                 enhanced_path = natural_enhance_image(final_output_path)
                 if enhanced_path != final_output_path and os.path.exists(enhanced_path):
                     os.remove(final_output_path)
@@ -165,367 +155,278 @@ class ProcessingWorker(QObject):
                 try: os.remove(no_bg_path)
                 except Exception as e: print(f"Geçici dosya silinemedi {no_bg_path}: {e}")
 
-        self.progress.emit(f"Kaydedildi: {os.path.basename(final_output_path)}")
+        self.callback("progress", f"Kaydedildi: {os.path.basename(final_output_path)}")
         
         remaining_credits = credits_manager.get_remaining_credits()
         credits_message = f"\n\nKalan kullanım hakkı: {remaining_credits}"
         if remaining_credits == 0:
             credits_message += "\n⚠️ Ücretsiz haklarınız bitti! Lütfen bakiye ekleyin."
         
-        self.finished.emit(final_output_path, credits_message)
+        self.callback("finished", final_output_path, credits_message)
 
-class MainWindow(QWidget):
+class MainWindow:
     # Constants
     TARGET_WIDTH_10x15 = 1181
     TARGET_HEIGHT_10x15 = 1772
     TOP_MARGIN_10x15 = 118
 
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle("BiyoVes - Vesikalık & Biyometrik")
-        self.setFixedSize(550, 650)
-        self.setObjectName("mainWindow")
-
+        self.root = tk.Tk()
+        self.root.title("BiyoVes - Vesikalık & Biyometrik")
+        self.root.geometry("550x650")
+        self.root.configure(bg='#212121')
+        
+        # Variables
         self.image_path = None
-        self.enable_retouch = False
+        self.enable_retouch = tk.BooleanVar()
         self.bg_remover = None
-        self.processing_thread = None
-        self.processing_worker = None
-
+        self.type_var = tk.StringVar(value="Vesikalık")
+        self.layout_var = tk.StringVar(value="4lu")
+        
         self._build_ui()
         self._start_model_loading()
         self._update_credits_display()
 
-    def _get_stylesheet(self):
-        return """
-            QWidget#mainWindow {
-                background-color: #212121;
-                font-family: Arial, sans-serif;
-            }
-            QLabel, QRadioButton, QCheckBox {
-                font-size: 14px;
-                color: #BDBDBD;
-            }
-            QLabel#titleLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #ffffff;
-                padding-bottom: 10px;
-            }
-            QLabel#fileInfoLabel {
-                color: #9E9E9E;
-                font-weight: bold;
-                font-style: italic;
-            }
-            QFrame#card {
-                background-color: #323232;
-                border-radius: 8px;
-                border: 1px solid #424242;
-            }
-            QLabel.cardTitle {
-                font-size: 16px;
-                font-weight: bold;
-                color: #E0E0E0;
-                padding-bottom: 8px;
-                border-bottom: 1px solid #424242;
-                margin-bottom: 10px;
-            }
-            QPushButton#processButton {
-                background-color: #E0E0E0;
-                color: #212121;
-                font-size: 18px;
-                font-weight: bold;
-                border: none;
-                border-radius: 5px;
-                padding: 12px;
-                min-height: 40px;
-            }
-            QPushButton#processButton:hover {
-                background-color: #ffffff;
-            }
-            QPushButton#processButton:disabled {
-                background-color: #424242;
-                color: #757575;
-            }
-            QPushButton, QPushButton#redeemButton {
-                background-color: #424242;
-                color: #E0E0E0;
-                border: 1px solid #616161;
-                border-radius: 5px;
-                padding: 8px 12px;
-                font-size: 14px;
-            }
-            QPushButton:hover, QPushButton#redeemButton:hover {
-                background-color: #616161;
-                border-color: #757575;
-            }
-            QLineEdit {
-                border: 1px solid #616161;
-                border-radius: 5px;
-                padding: 8px;
-                background-color: #212121;
-                color: #E0E0E0;
-                font-size: 14px;
-            }
-            QLineEdit:focus {
-                border: 1px solid #9E9E9E;
-            }
-        """
-
     def _build_ui(self):
-        self.setStyleSheet(self._get_stylesheet())
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(25, 20, 25, 20)
-        main_layout.setSpacing(18)
-
-        title_label = QLabel("BiyoVes - Fotoğraf Yazılımı")
-        title_label.setObjectName("titleLabel")
-        main_layout.addWidget(title_label, alignment=Qt.AlignCenter)
-
-        main_layout.addWidget(self._create_card("1. Fotoğrafı Seçin", self._create_file_selection_ui()))
-        main_layout.addWidget(self._create_card("2. Ayarları Yapılandır", self._create_settings_ui()))
+        # Title
+        title_label = tk.Label(self.root, text="BiyoVes - Fotoğraf Yazılımı", 
+                              font=("Arial", 24, "bold"), fg="white", bg="#212121")
+        title_label.pack(pady=20)
         
-        self.process_button = QPushButton("Fotoğrafı İşle")
-        self.process_button.setObjectName("processButton")
-        self.process_button.setEnabled(False)
-        self.process_button.clicked.connect(self.process_image)
-        main_layout.addWidget(self.process_button)
-
-        main_layout.addStretch(1)
-
-        main_layout.addWidget(self._create_card("Durum ve Bakiye", self._create_status_and_credits_ui()))
-
-    def _create_card(self, title, content_widget):
-        card = QFrame()
-        card.setObjectName("card")
-        card_layout = QVBoxLayout(card)
-        card_layout.setSpacing(15)
-
-        card_title = QLabel(title)
-        card_title.setObjectName("cardTitle")
-        card_layout.addWidget(card_title)
-        card_layout.addWidget(content_widget)
+        # File selection frame
+        file_frame = tk.Frame(self.root, bg="#323232", relief="raised", bd=1)
+        file_frame.pack(fill="x", padx=25, pady=10)
         
-        return card
-
-    def _create_file_selection_ui(self):
-        container = QWidget()
-        layout = QHBoxLayout(container)
-        layout.setContentsMargins(0,0,0,0)
+        tk.Label(file_frame, text="1. Fotoğrafı Seçin", font=("Arial", 16, "bold"), 
+                fg="#E0E0E0", bg="#323232").pack(pady=10)
         
-        self.file_button = QPushButton("Gözat...")
-        self.file_button.setEnabled(False)
-        self.file_button.clicked.connect(self.choose_file)
+        file_btn_frame = tk.Frame(file_frame, bg="#323232")
+        file_btn_frame.pack(fill="x", padx=10, pady=10)
         
-        self.file_info_label = QLabel("Henüz dosya seçilmedi.")
-        self.file_info_label.setObjectName("fileInfoLabel")
+        self.file_button = tk.Button(file_btn_frame, text="Gözat...", 
+                                   command=self.choose_file, state="disabled",
+                                   bg="#424242", fg="#E0E0E0", font=("Arial", 14))
+        self.file_button.pack(side="left")
         
-        layout.addWidget(self.file_button)
-        layout.addWidget(self.file_info_label, 1, alignment=Qt.AlignLeft)
-        return container
-
-    def _create_settings_ui(self):
-        container = QWidget()
-        card_layout = QVBoxLayout(container)
-        card_layout.setContentsMargins(0,0,0,0)
-        card_layout.setSpacing(15)
-
-        type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("<b>Tür:</b>"))
-        self.vesikalik_radio = QRadioButton("Vesikalık")
-        self.biyometrik_radio = QRadioButton("Biyometrik")
-        self.tek_radio = QRadioButton("10x15 cm")
-        self.vesikalik_radio.setChecked(True)
-        self.type_selection_group = QButtonGroup(self)
-        self.type_selection_group.addButton(self.vesikalik_radio)
-        self.type_selection_group.addButton(self.biyometrik_radio)
-        self.type_selection_group.addButton(self.tek_radio)
-        self.type_selection_group.buttonToggled.connect(self._on_type_change)
+        self.file_info_label = tk.Label(file_btn_frame, text="Henüz dosya seçilmedi.", 
+                                       fg="#9E9E9E", bg="#323232", font=("Arial", 14, "italic"))
+        self.file_info_label.pack(side="left", padx=10)
         
-        for widget in [self.vesikalik_radio, self.biyometrik_radio, self.tek_radio]:
-            widget.setEnabled(False)
-            type_layout.addWidget(widget)
-        type_layout.addStretch()
-        card_layout.addLayout(type_layout)
-
-        self.count_frame = QWidget()
-        count_layout = QHBoxLayout(self.count_frame)
-        count_layout.setContentsMargins(0, 0, 0, 0)
-        count_layout.addWidget(QLabel("<b>Yerleşim:</b>"))
-        self.fourlu_radio = QRadioButton("4'lü (10x15 cm)")
-        self.twoli_radio = QRadioButton("2'li (5x15 cm)")
-        self.fourlu_radio.setChecked(True)
-        self.fourlu_radio.setEnabled(False)
-        self.twoli_radio.setEnabled(False)
-        count_layout.addWidget(self.fourlu_radio)
-        count_layout.addWidget(self.twoli_radio)
-        count_layout.addStretch()
-        card_layout.addWidget(self.count_frame)
+        # Settings frame
+        settings_frame = tk.Frame(self.root, bg="#323232", relief="raised", bd=1)
+        settings_frame.pack(fill="x", padx=25, pady=10)
         
-        self.retouch_checkbox = QCheckBox("Doğal Rötuş Uygula")
-        self.retouch_checkbox.setEnabled(False)
-        self.retouch_checkbox.toggled.connect(self._toggle_retouch)
-        card_layout.addWidget(self.retouch_checkbox)
-
-        return container
-
-    def _create_status_and_credits_ui(self):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0,0,0,0)
+        tk.Label(settings_frame, text="2. Ayarları Yapılandır", font=("Arial", 16, "bold"), 
+                fg="#E0E0E0", bg="#323232").pack(pady=10)
         
-        self.model_status_label = QLabel("AI servisleri başlatılıyor...")
-        self.status_label = QLabel("Lütfen bekleyin...")
-        self.credits_label = QLabel()
-
-        layout.addWidget(self.model_status_label)
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.credits_label)
-
-        bottom_layout = QHBoxLayout()
-        self.add_balance_button = QPushButton("Bakiye Ekle")
-        self.add_balance_button.clicked.connect(self._open_shopier)
+        # Type selection
+        type_frame = tk.Frame(settings_frame, bg="#323232")
+        type_frame.pack(fill="x", padx=10, pady=5)
         
-        self.key_entry = QLineEdit()
-        self.key_entry.setPlaceholderText("Kullanım Kodu")
-        self.redeem_button = QPushButton("Kodu Kullan")
-        self.redeem_button.setObjectName("redeemButton")
-        self.redeem_button.clicked.connect(self._redeem_key)
-
-        bottom_layout.addWidget(self.add_balance_button)
-        bottom_layout.addSpacing(10)
-        bottom_layout.addWidget(self.key_entry, 1)
-        bottom_layout.addWidget(self.redeem_button)
-        layout.addLayout(bottom_layout)
+        tk.Label(type_frame, text="Tür:", font=("Arial", 14, "bold"), 
+                fg="#BDBDBD", bg="#323232").pack(side="left")
         
-        return container
+        self.vesikalik_radio = tk.Radiobutton(type_frame, text="Vesikalık", variable=self.type_var, 
+                                            value="Vesikalık", state="disabled", bg="#323232", 
+                                            fg="#BDBDBD", font=("Arial", 14))
+        self.vesikalik_radio.pack(side="left", padx=10)
+        
+        self.biyometrik_radio = tk.Radiobutton(type_frame, text="Biyometrik", variable=self.type_var, 
+                                            value="Biyometrik", state="disabled", bg="#323232", 
+                                            fg="#BDBDBD", font=("Arial", 14))
+        self.biyometrik_radio.pack(side="left", padx=10)
+        
+        self.tek_radio = tk.Radiobutton(type_frame, text="10x15 cm", variable=self.type_var, 
+                                      value="10x15 cm", state="disabled", bg="#323232", 
+                                      fg="#BDBDBD", font=("Arial", 14))
+        self.tek_radio.pack(side="left", padx=10)
+        
+        # Layout selection
+        self.layout_frame = tk.Frame(settings_frame, bg="#323232")
+        self.layout_frame.pack(fill="x", padx=10, pady=5)
+        
+        tk.Label(self.layout_frame, text="Yerleşim:", font=("Arial", 14, "bold"), 
+                fg="#BDBDBD", bg="#323232").pack(side="left")
+        
+        self.fourlu_radio = tk.Radiobutton(self.layout_frame, text="4'lü (10x15 cm)", 
+                                         variable=self.layout_var, value="4lu", state="disabled", 
+                                         bg="#323232", fg="#BDBDBD", font=("Arial", 14))
+        self.fourlu_radio.pack(side="left", padx=10)
+        
+        self.twoli_radio = tk.Radiobutton(self.layout_frame, text="2'li (5x15 cm)", 
+                                        variable=self.layout_var, value="2li", state="disabled", 
+                                        bg="#323232", fg="#BDBDBD", font=("Arial", 14))
+        self.twoli_radio.pack(side="left", padx=10)
+        
+        # Retouch checkbox
+        self.retouch_checkbox = tk.Checkbutton(settings_frame, text="Doğal Rötuş Uygula", 
+                                             variable=self.enable_retouch, state="disabled", 
+                                             bg="#323232", fg="#BDBDBD", font=("Arial", 14))
+        self.retouch_checkbox.pack(pady=10)
+        
+        # Process button
+        self.process_button = tk.Button(self.root, text="Fotoğrafı İşle", 
+                                      command=self.process_image, state="disabled",
+                                      bg="#E0E0E0", fg="#212121", font=("Arial", 18, "bold"),
+                                      height=2)
+        self.process_button.pack(fill="x", padx=25, pady=20)
+        
+        # Status frame
+        status_frame = tk.Frame(self.root, bg="#323232", relief="raised", bd=1)
+        status_frame.pack(fill="x", padx=25, pady=10)
+        
+        tk.Label(status_frame, text="Durum ve Bakiye", font=("Arial", 16, "bold"), 
+                fg="#E0E0E0", bg="#323232").pack(pady=10)
+        
+        self.model_status_label = tk.Label(status_frame, text="AI servisleri başlatılıyor...", 
+                                          fg="#BDBDBD", bg="#323232", font=("Arial", 14))
+        self.model_status_label.pack(pady=5)
+        
+        self.status_label = tk.Label(status_frame, text="Lütfen bekleyin...", 
+                                    fg="#BDBDBD", bg="#323232", font=("Arial", 14))
+        self.status_label.pack(pady=5)
+        
+        self.credits_label = tk.Label(status_frame, text="", fg="#E0E0E0", bg="#323232", 
+                                     font=("Arial", 14, "bold"))
+        self.credits_label.pack(pady=5)
+        
+        # Bottom buttons
+        bottom_frame = tk.Frame(status_frame, bg="#323232")
+        bottom_frame.pack(fill="x", padx=10, pady=10)
+        
+        self.add_balance_button = tk.Button(bottom_frame, text="Bakiye Ekle", 
+                                           command=self._open_shopier,
+                                           bg="#424242", fg="#E0E0E0", font=("Arial", 14))
+        self.add_balance_button.pack(side="left")
+        
+        self.key_entry = tk.Entry(bottom_frame, font=("Arial", 14), width=15)
+        self.key_entry.pack(side="left", padx=10)
+        
+        self.redeem_button = tk.Button(bottom_frame, text="Kodu Kullan", 
+                                      command=self._redeem_key,
+                                      bg="#424242", fg="#E0E0E0", font=("Arial", 14))
+        self.redeem_button.pack(side="left")
 
-    def set_status(self, text: str): self.status_label.setText(f"Durum: {text}")
-    def set_model_status(self, text: str): self.model_status_label.setText(f"Servis: {text}")
+    def set_status(self, text: str): 
+        self.status_label.config(text=f"Durum: {text}")
+    
+    def set_model_status(self, text: str): 
+        self.model_status_label.config(text=f"Servis: {text}")
 
     def _update_credits_display(self):
         remaining = credits_manager.get_remaining_credits()
         if remaining > 0:
-            self.credits_label.setText(f"Kalan Kullanım Hakkı: {remaining}")
-            self.credits_label.setStyleSheet("color: #E0E0E0; font-weight:bold;")
+            self.credits_label.config(text=f"Kalan Kullanım Hakkı: {remaining}", 
+                                    fg="#E0E0E0")
         else:
-            self.credits_label.setText("Kullanım hakkınız kalmadı.")
-            self.credits_label.setStyleSheet("color: #9E9E9E; font-weight:bold;")
+            self.credits_label.config(text="Kullanım hakkınız kalmadı.", 
+                                    fg="#9E9E9E")
             self.set_status("Lütfen bakiye ekleyin veya kod kullanın.")
 
     def _open_shopier(self):
-        try: webbrowser.open("https://www.shopier.com/biyoves")
-        except Exception as e: QMessageBox.critical(self, "Hata", f"Ödeme sayfası açılamadı:\n{e}")
+        try: 
+            webbrowser.open("https://www.shopier.com/biyoves")
+        except Exception as e: 
+            messagebox.showerror("Hata", f"Ödeme sayfası açılamadı:\n{e}")
 
     def _redeem_key(self):
-        key_str = self.key_entry.text().strip()
+        key_str = self.key_entry.get().strip()
         if not key_str:
-            QMessageBox.warning(self, "Uyarı", "Lütfen bir kullanım kodu girin.")
+            messagebox.showwarning("Uyarı", "Lütfen bir kullanım kodu girin.")
             return
         ok, msg, added = credits_manager.redeem_key(key_str)
         if ok:
-            self.key_entry.clear()
+            self.key_entry.delete(0, tk.END)
             self._update_credits_display()
-            QMessageBox.information(self, "Başarılı", msg)
+            messagebox.showinfo("Başarılı", msg)
             self.set_status(f"{added} hak eklendi.")
         else:
-            QMessageBox.critical(self, "Geçersiz Kod", msg)
+            messagebox.showerror("Geçersiz Kod", msg)
 
     def _start_model_loading(self):
-        self.model_thread = QThread()
-        self.model_worker = ModelLoaderWorker()
-        self.model_worker.moveToThread(self.model_thread)
-        self.model_thread.started.connect(self.model_worker.run)
-        self.model_worker.finished.connect(self._on_models_loaded)
-        self.model_worker.error.connect(self._on_model_load_error)
-        self.model_worker.progress.connect(self.set_model_status)
-        self.model_worker.finished.connect(self.model_thread.quit)
-        self.model_worker.finished.connect(self.model_worker.deleteLater)
-        self.model_thread.finished.connect(self.model_thread.deleteLater)
-        self.model_thread.start()
+        def model_worker():
+            worker = ModelLoaderWorker(self._on_model_callback)
+            worker.run()
+        
+        thread = threading.Thread(target=model_worker, daemon=True)
+        thread.start()
 
-    def _on_models_loaded(self, bg_remover_instance):
-        self.bg_remover = bg_remover_instance
-        self.set_model_status("Hazır")
-        self.set_status("Başlamak için bir fotoğraf seçin.")
-        self._enable_all_controls(True)
-
-    def _on_model_load_error(self, error_msg):
-        self.set_model_status("Başlatılamadı")
-        self.set_status("API hatası. Uygulamayı yeniden başlatın.")
-        self._enable_all_controls(True)
-
-    def _on_type_change(self, button, checked):
-        if not checked: return
-        is_10x15 = (button.text() == "10x15 cm")
-        self.count_frame.setVisible(not is_10x15)
-
-    def _toggle_retouch(self, checked): self.enable_retouch = checked
+    def _on_model_callback(self, event_type, *args):
+        if event_type == "progress":
+            self.set_model_status(args[0])
+        elif event_type == "finished":
+            self.bg_remover = args[0]
+            self.set_model_status("Hazır")
+            self.set_status("Başlamak için bir fotoğraf seçin.")
+            self._enable_all_controls(True)
+        elif event_type == "error":
+            self.set_model_status("Başlatılamadı")
+            self.set_status("API hatası. Uygulamayı yeniden başlatın.")
+            self._enable_all_controls(True)
 
     def _enable_all_controls(self, enabled: bool):
-        self.file_button.setEnabled(enabled)
-        self.process_button.setEnabled(enabled)
-        self.retouch_checkbox.setEnabled(enabled)
-        for button in self.type_selection_group.buttons():
-            button.setEnabled(enabled)
-        self.fourlu_radio.setEnabled(enabled)
-        self.twoli_radio.setEnabled(enabled)
+        state = "normal" if enabled else "disabled"
+        self.file_button.config(state=state)
+        self.process_button.config(state=state)
+        self.retouch_checkbox.config(state=state)
+        self.vesikalik_radio.config(state=state)
+        self.biyometrik_radio.config(state=state)
+        self.tek_radio.config(state=state)
+        self.fourlu_radio.config(state=state)
+        self.twoli_radio.config(state=state)
 
     def choose_file(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Fotoğraf Seç", "", "Resim Dosyaları (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)")
+        path = filedialog.askopenfilename(
+            title="Fotoğraf Seç",
+            filetypes=[("Resim Dosyaları", "*.png *.jpg *.jpeg *.bmp *.tif *.tiff")]
+        )
         if path:
             self.image_path = path
-            self.file_info_label.setText(os.path.basename(path))
+            self.file_info_label.config(text=os.path.basename(path))
 
     def process_image(self):
         if not self.image_path:
-            QMessageBox.warning(self, "Uyarı", "Lütfen önce bir fotoğraf seçin.")
+            messagebox.showwarning("Uyarı", "Lütfen önce bir fotoğraf seçin.")
             return
         if not self.bg_remover:
-            QMessageBox.warning(self, "Uyarı", "AI servisleri henüz hazır değil, lütfen bekleyin.")
+            messagebox.showwarning("Uyarı", "AI servisleri henüz hazır değil, lütfen bekleyin.")
             return
         if not credits_manager.has_credits():
-            QMessageBox.warning(self, "Kullanım Hakkı Bitti", "Ücretsiz haklarınız bitti. Devam etmek için 'Bakiye Ekle' butonuna tıklayın.")
+            messagebox.showwarning("Kullanım Hakkı Bitti", 
+                                 "Ücretsiz haklarınız bitti. Devam etmek için 'Bakiye Ekle' butonuna tıklayın.")
             self._update_credits_display()
             return
         
         self.set_status("İşlem başlatılıyor...")
-        self.process_button.setEnabled(False)
-        self.process_button.setText("İşleniyor...")
+        self.process_button.config(state="disabled", text="İşleniyor...")
 
-        self.processing_thread = QThread()
-        self.processing_worker = ProcessingWorker(self)
-        self.processing_worker.moveToThread(self.processing_thread)
-        self.processing_thread.started.connect(self.processing_worker.run)
-        self.processing_worker.finished.connect(self._on_processing_finished)
-        self.processing_worker.error.connect(self._on_processing_error)
-        self.processing_worker.progress.connect(self.set_status)
-        self.processing_worker.finished.connect(self.processing_thread.quit)
-        self.processing_worker.finished.connect(self.processing_worker.deleteLater)
-        self.processing_thread.finished.connect(self.processing_thread.deleteLater)
-        self.processing_thread.start()
+        def processing_worker():
+            worker = ProcessingWorker(self, self._on_processing_callback)
+            worker.run()
+        
+        thread = threading.Thread(target=processing_worker, daemon=True)
+        thread.start()
 
-    def _on_processing_finished(self, final_path, credits_message):
-        self._update_credits_display()
-        self.process_button.setEnabled(True)
-        self.process_button.setText("Fotoğrafı İşle")
-        QMessageBox.information(self, "İşlem Tamamlandı",
-            f"Fotoğraf başarıyla işlendi ve kaydedildi!\n\nDosya: {os.path.basename(final_path)}\nKonum: {os.path.dirname(final_path)}{credits_message}"
-        )
+    def _on_processing_callback(self, event_type, *args):
+        if event_type == "progress":
+            self.set_status(args[0])
+        elif event_type == "finished":
+            self._update_credits_display()
+            self.process_button.config(state="normal", text="Fotoğrafı İşle")
+            messagebox.showinfo("İşlem Tamamlandı",
+                f"Fotoğraf başarıyla işlendi ve kaydedildi!\n\nDosya: {os.path.basename(args[0])}\nKonum: {os.path.dirname(args[0])}{args[1] if len(args) > 1 else ''}")
+        elif event_type == "error":
+            self._update_credits_display()
+            self.process_button.config(state="normal", text="Fotoğrafı İşle")
+            self.set_status("Hata oluştu - Kredi iade edildi")
+            messagebox.showerror("Hata", args[0])
 
-    def _on_processing_error(self, error_message):
-        self._update_credits_display()
-        self.process_button.setEnabled(True)
-        self.process_button.setText("Fotoğrafı İşle")
-        self.set_status("Hata oluştu - Kredi iade edildi")
-        QMessageBox.critical(self, "Hata", error_message)
+    def run(self):
+        self.root.mainloop()
 
 def main():
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    app = MainWindow()
+    app.run()
 
 if __name__ == "__main__":
     main()
-
