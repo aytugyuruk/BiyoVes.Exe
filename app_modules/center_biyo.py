@@ -169,6 +169,7 @@ def create_smart_biometric_photo(input_path, output_path):
     
     # Update positions after scaling
     scaled_face_center_x = int(face_center_x * scale_factor)
+    scaled_face_center_y = int(face_center_y * scale_factor)
     scaled_face_bottom_y = int(face_bottom_y * scale_factor)
     scaled_head_top_x = int(head_top_x * scale_factor)
     scaled_head_top_y = int(head_top_y * scale_factor)

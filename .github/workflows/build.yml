@@ -56,19 +56,13 @@ jobs:
             --hidden-import=replicate `
             --hidden-import=replicate.client `
             --hidden-import=replicate.__about__ `
-            --hidden-import=replicate.models `
-            --hidden-import=replicate.prediction `
-            --hidden-import=replicate.exceptions `
             --hidden-import=importlib.metadata `
-            --hidden-import=importlib.metadata.distributions `
-            --hidden-import=importlib.metadata.entry_points `
             --hidden-import=tkinter `
             --hidden-import=tkinter.ttk `
             --hidden-import=tkinter.filedialog `
             --hidden-import=tkinter.messagebox `
             --collect-all=replicate `
             --collect-all=importlib.metadata `
-            --collect-data=replicate `
             --clean `
             --noconfirm `
             desktop_app.py
