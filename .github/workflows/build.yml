@@ -58,7 +58,14 @@ jobs:
             --hidden-import=PySide6.QtCore `
             --hidden-import=PySide6.QtWidgets `
             --hidden-import=PySide6.QtGui `
+            --hidden-import=PySide6.QtOpenGL `
+            --hidden-import=PySide6.QtPrintSupport `
             --collect-all=PySide6 `
+            --collect-all=PySide6.QtCore `
+            --collect-all=PySide6.QtWidgets `
+            --collect-all=PySide6.QtGui `
+            --collect-binaries=PySide6 `
+            --noupx `
             --clean `
             --noconfirm `
             desktop_app.py
