@@ -54,10 +54,15 @@ jobs:
             --hidden-import=numpy `
             --hidden-import=requests `
             --hidden-import=replicate `
+            --hidden-import=replicate.client `
+            --hidden-import=replicate.__about__ `
+            --hidden-import=importlib.metadata `
             --hidden-import=tkinter `
             --hidden-import=tkinter.ttk `
             --hidden-import=tkinter.filedialog `
             --hidden-import=tkinter.messagebox `
+            --collect-all=replicate `
+            --collect-all=importlib.metadata `
             --clean `
             --noconfirm `
             desktop_app.py
