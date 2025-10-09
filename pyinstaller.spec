@@ -5,10 +5,6 @@ import sys
 from PyInstaller.utils.hooks import copy_metadata, collect_data_files, collect_dynamic_libs
 
 # Get the project root directory
-import sys
-from PyInstaller.utils.hooks import copy_metadata, collect_data_files, collect_dynamic_libs
-
-# Get the project root directory
 project_root = os.path.abspath('.')
 
 # Data files to include
@@ -70,7 +66,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['runtime-hook.py'],
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

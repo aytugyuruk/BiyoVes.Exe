@@ -25,11 +25,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-        # PySide6 DLL'lerinin doğru yüklenmesi için
+        # PySide6 ve shiboken6'yı temiz yükle
         pip uninstall -y PySide6 shiboken6
-        pip install --no-cache-dir PySide6
-        # PySide6 DLL'lerinin PATH'e eklenmesi
-        echo "$((Get-Command python).Path | Split-Path)\Lib\site-packages\PySide6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        pip install --no-cache-dir --force-reinstall PySide6
+        # Qt DLL'lerinin yolunu ekle
+        $pyside6_path = (python -c "import PySide6; print(PySide6.__path__[0])")
+        echo "Adding Qt DLL path: $pyside6_path"
+        echo $pyside6_path | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        # Sistem PATH'ine de ekle
+        $env:PATH = "$pyside6_path;$env:PATH"
 
     - name: Verify files exist
       run: |
