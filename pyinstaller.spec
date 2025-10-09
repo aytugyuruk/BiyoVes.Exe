@@ -1,8 +1,22 @@
-# -*- mode: python ; coding: utf-8 -*-
-
-import os
+# -*- mode: python ; coding# Hidden imports - replicate ve PySide6 için gerekli modüller
+hiddenimports = [
+    'cv2',
+    'PIL',
+    'numpy',
+    'requests',
+    'PySide6',
+    'PySide6.QtCore',
+    'PySide6.QtGui',
+    'PySide6.QtWidgets',
+    'PySide6.QtSvg',
+    'PySide6.QtNetwork',
+    'PySide6.QtPrintSupport',  # Printing support
+    'PySide6.QtXml',  # XML support
+    'replicate',
+    'replicate.__about__',
+    'replicate.client',port os
 import sys
-from PyInstaller.utils.hooks import copy_metadata
+from PyInstaller.utils.hooks import copy_metadata, collect_data_files, collect_dynamic_libs
 
 # Get the project root directory
 project_root = os.path.abspath('.')
@@ -12,10 +26,18 @@ datas = [
     ('haarcascade_frontalface_default.xml', '.'),
 ]
 
-# Metadata dosyalarını dahil et (Windows için gerekli)
+# PySide6 ve Qt DLL'lerini topla
+qt_dlls = collect_dynamic_libs('PySide6')
+pyside_data = collect_data_files('PySide6')
+shiboken_data = collect_data_files('shiboken6')
+
+# Metadata ve DLL'leri dahil et (Windows için gerekli)
 datas += copy_metadata('replicate')
 datas += copy_metadata('PySide6')
 datas += copy_metadata('shiboken6')
+datas += qt_dlls
+datas += pyside_data
+datas += shiboken_data
 
 # Hidden imports - replicate ve PySide6 için gerekli modüller
 hiddenimports = [
