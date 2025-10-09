@@ -229,17 +229,20 @@ class MainWindow:
         
         self.vesikalik_radio = tk.Radiobutton(type_frame, text="Vesikalık", variable=self.type_var, 
                                             value="Vesikalık", state="disabled", bg="#323232", 
-                                            fg="#BDBDBD", font=("Arial", 14))
+                                            fg="#BDBDBD", font=("Arial", 14),
+                                            command=self._on_type_change)
         self.vesikalik_radio.pack(side="left", padx=10)
         
         self.biyometrik_radio = tk.Radiobutton(type_frame, text="Biyometrik", variable=self.type_var, 
                                             value="Biyometrik", state="disabled", bg="#323232", 
-                                            fg="#BDBDBD", font=("Arial", 14))
+                                            fg="#BDBDBD", font=("Arial", 14),
+                                            command=self._on_type_change)
         self.biyometrik_radio.pack(side="left", padx=10)
         
         self.tek_radio = tk.Radiobutton(type_frame, text="10x15 cm", variable=self.type_var, 
                                       value="10x15 cm", state="disabled", bg="#323232", 
-                                      fg="#BDBDBD", font=("Arial", 14))
+                                      fg="#BDBDBD", font=("Arial", 14),
+                                      command=self._on_type_change)
         self.tek_radio.pack(side="left", padx=10)
         
         # Layout selection
@@ -364,6 +367,21 @@ class MainWindow:
             self.set_model_status("Başlatılamadı")
             self.set_status("API hatası. Uygulamayı yeniden başlatın.")
             self._enable_all_controls(True)
+
+    def _on_type_change(self):
+        """Tür seçimi değiştiğinde yerleşim seçeneklerini güncelle"""
+        selected_type = self.type_var.get()
+        is_10x15 = (selected_type == "10x15 cm")
+        
+        # 10x15 seçilirse yerleşim seçeneklerini devre dışı bırak
+        if is_10x15:
+            self.fourlu_radio.config(state="disabled")
+            self.twoli_radio.config(state="disabled")
+        else:
+            # Diğer seçenekler için yerleşim seçeneklerini aktif et
+            if self.vesikalik_radio.cget("state") == "normal" or self.biyometrik_radio.cget("state") == "normal":
+                self.fourlu_radio.config(state="normal")
+                self.twoli_radio.config(state="normal")
 
     def _enable_all_controls(self, enabled: bool):
         state = "normal" if enabled else "disabled"
