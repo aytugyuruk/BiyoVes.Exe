@@ -48,12 +48,22 @@ class ModNetBGRemover:
         
         # Replicate lazy import edildi, kontrol gerekmez
 
-        # 1) Replicate'a gönderim: local dosyayı upload edip URL elde et
-        # Replicate Python SDK, dosya path'ini doğrudan input olarak destekler.
-        # Model: pollinations/modnet
-        input_payload = {
-            "image": open(input_path, "rb")
-        }
+        # 1) Önce görüntüyü doğrula
+        try:
+            # Görüntüyü PIL ile kontrol et
+            with Image.open(input_path) as img:
+                # Geçici bir buffer'a kaydet
+                img_buffer = io.BytesIO()
+                img.save(img_buffer, format=img.format or 'PNG')
+                img_buffer.seek(0)
+                
+                # Replicate'a gönderim
+                input_payload = {
+                    "image": img_buffer
+                }
+        except Exception as e:
+            raise RuntimeError(f"Görüntü dosyası açılamadı veya okunamadı: {e}")
+            
         try:
             # DNS çözümleme sorununu çözmek için retry mekanizması
             import time
