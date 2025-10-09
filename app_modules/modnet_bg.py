@@ -78,7 +78,7 @@ class ModNetBGRemover:
                 except Exception as e:
                     if attempt < max_retries - 1:
                         print(f"🔄 DNS çözümleme hatası, {attempt + 1}/{max_retries} deneme...")
-                        time.sleep(2)  # 2 saniye bekle
+                        time.sleep(1)  # 1 saniye bekle (daha hızlı)
                         continue
                     else:
                         raise RuntimeError(f"Replicate çağrısı başarısız (DNS hatası): {e}")
@@ -109,7 +109,7 @@ class ModNetBGRemover:
                 raise RuntimeError("Replicate çıktısı çözümlenemedi.")
             try:
                 # SSL doğrulamasını devre dışı bırak (Windows için)
-                resp = requests.get(file_url, timeout=30, verify=False)
+                resp = requests.get(file_url, timeout=60, verify=False)  # Daha uzun timeout
                 resp.raise_for_status()
                 file_bytes = resp.content
             except Exception as e:
@@ -136,7 +136,8 @@ class ModNetBGRemover:
             output_path = output_path[:-4] + '.jpg'
 
         try:
-            rgb.save(output_path, format='JPEG', quality=100, optimize=True)
+            # Maksimum kalite ile kaydet - Replicate API'den gelen kaliteyi koru
+            rgb.save(output_path, format='JPEG', quality=100, optimize=True, subsampling=0)
         except Exception as e:
             raise RuntimeError(f"Çıktı kaydedilemedi: {e}")
 
