@@ -19,56 +19,33 @@ ModNetLocalBGRemover = None
 MODNET_LOCAL_ERROR = None
 
 try:
-    print("🔍 ModNet Local yüklenmeye çalışılıyor...")
+    print("[DEBUG] ModNet Local yuklenmeye calisiliyor...")
     
     # Önce PyTorch kontrolü
     try:
         import torch
-        print(f"✅ PyTorch yüklü: {torch.__version__}")
+        print(f"[OK] PyTorch yuklu: {torch.__version__}")
     except ImportError as e:
-        raise RuntimeError(f"PyTorch yüklü değil: {e}")
+        raise RuntimeError(f"PyTorch yuklu degil: {e}")
     
     # NumPy kontrolü
     try:
         import numpy as np
-        print(f"✅ NumPy yüklü: {np.__version__}")
+        print(f"[OK] NumPy yuklu: {np.__version__}")
     except ImportError as e:
-        raise RuntimeError(f"NumPy yüklü değil: {e}")
+        raise RuntimeError(f"NumPy yuklu degil: {e}")
     
-    # MODNet model dosyası kontrolü
-    import os
-    import sys
-    
-    # PyInstaller exe için dosya yolu kontrolü
-    if getattr(sys, 'frozen', False):
-        # PyInstaller ile oluşturulan exe
-        base_path = sys._MEIPASS
-        model_path = os.path.join(base_path, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
-        print(f"🔍 PyInstaller exe modu - base_path: {base_path}")
-    else:
-        # Normal Python script
-        try:
-            script_dir = os.path.dirname(__file__)
-        except NameError:
-            # __file__ tanımlı değilse (bazı exe durumlarında)
-            script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        model_path = os.path.join(script_dir, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
-        print(f"🔍 Normal Python modu - script_dir: {script_dir}")
-    
-    if not os.path.exists(model_path):
-        raise RuntimeError(f"MODNet model dosyası bulunamadı: {model_path}")
-    else:
-        print(f"✅ MODNet model dosyası bulundu: {model_path}")
-    
-    # ModNet Local import
+    # ModNet Local import - model loader kullanacak
     from app_modules.modnet_local import ModNetLocalBGRemover
-    print("✅ ModNet Local modülü başarıyla yüklendi")
+    print("[OK] ModNet Local modulu basariyla yuklendi")
     MODNET_LOCAL_AVAILABLE = True
     
 except Exception as e:
-    print(f"❌ ModNet Local yüklenemedi: {e}")
-    print(f"   Hata türü: {type(e).__name__}")
-    print("   Sadece ModNet API kullanılabilir.")
+    print(f"[ERROR] ModNet Local yuklenemedi: {e}")
+    print(f"   Hata turu: {type(e).__name__}")
+    print("   Sadece ModNet API kullanilabilir.")
+    import traceback
+    traceback.print_exc()
     ModNetLocalBGRemover = None
     MODNET_LOCAL_AVAILABLE = False
     MODNET_LOCAL_ERROR = str(e)
