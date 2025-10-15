@@ -571,6 +571,15 @@ class MainWindow:
         self.root.mainloop()
 
 def main():
+    # Debug modu - console çıktısını görmek için
+    if len(sys.argv) > 1 and sys.argv[1] == "--debug":
+        print("🔍 Debug modu aktif - console çıktısı görünür")
+        # Console window'u açık tut
+        import atexit
+        def keep_console_open():
+            input("\nPress Enter to exit...")
+        atexit.register(keep_console_open)
+    
     app = MainWindow()
     app.run()
 

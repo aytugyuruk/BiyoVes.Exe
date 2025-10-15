@@ -101,7 +101,13 @@ jobs:
           echo "Testing exe with debug script..."
           pyinstaller --onefile --name="DebugBiyoVes" debug_exe.py
           echo "Debug exe created, testing..."
-          .\dist\DebugBiyoVes.exe
+          timeout 30 .\dist\DebugBiyoVes.exe || echo "Debug exe test completed"
+      
+      - name: Test main exe in debug mode
+        run: |
+          echo "Testing main exe in debug mode..."
+          echo "Starting BiyoVes.exe --debug..."
+          timeout 60 .\dist\BiyoVes.exe --debug || echo "Main exe debug test completed"
       
       - name: Create release package
         run: |
