@@ -66,8 +66,7 @@ jobs:
             $iconParam `
             --add-data="haarcascade_frontalface_default.xml;." `
             --add-data="app_modules;app_modules" `
-            --add-data="MODNet;MODNet" `
-            --add-data="MODNet/pretrained;MODNet/pretrained" `
+            --add-data="MODNet/src;MODNet/src" `
             --hidden-import=cv2 `
             --hidden-import=PIL `
             --hidden-import=numpy `
