@@ -87,6 +87,7 @@ jobs:
             --hidden-import=torchvision.transforms `
             --hidden-import=app_modules.modnet_bg `
             --hidden-import=app_modules.modnet_local `
+            --hidden-import=app_modules.model_loader `
             --hidden-import=app_modules.center_biyo `
             --hidden-import=app_modules.center_vesika `
             --hidden-import=app_modules.duzen `

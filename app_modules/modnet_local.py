@@ -60,32 +60,10 @@ class ModNetLocalBGRemover:
         
         # Model checkpoint yolu
         if ckpt_path is None:
-            # PyInstaller exe için dosya yolu kontrolü
-            if getattr(sys, 'frozen', False):
-                # PyInstaller ile oluşturulan exe
-                base_path = sys._MEIPASS
-                ckpt_path = os.path.join(
-                    base_path, 
-                    'MODNet', 
-                    'pretrained', 
-                    'modnet_photographic_portrait_matting.ckpt'
-                )
-                print(f"🔍 PyInstaller exe modu - base_path: {base_path}")
-            else:
-                # Normal Python script
-                try:
-                    script_dir = os.path.dirname(__file__)
-                except NameError:
-                    # __file__ tanımlı değilse (bazı exe durumlarında)
-                    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-                project_root = os.path.abspath(os.path.join(script_dir, '..'))
-                ckpt_path = os.path.join(
-                    project_root, 
-                    'MODNet', 
-                    'pretrained', 
-                    'modnet_photographic_portrait_matting.ckpt'
-                )
-                print(f"🔍 Normal Python modu - project_root: {project_root}")
+            # Model loader kullanarak model dosyasını al
+            from .model_loader import get_model_path
+            ckpt_path = get_model_path()
+            print(f"📦 Model dosyası yolu: {ckpt_path}")
         
         if not os.path.exists(ckpt_path):
             raise RuntimeError(

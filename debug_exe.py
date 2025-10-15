@@ -17,6 +17,19 @@ def main():
     if getattr(sys, 'frozen', False):
         print(f"sys._MEIPASS: {sys._MEIPASS}")
         print(f"sys.executable: {sys.executable}")
+        
+        # Exe içindeki dosyaları listele
+        print(f"\n[DEBUG] Exe icindeki dosyalar:")
+        try:
+            for root, dirs, files in os.walk(sys._MEIPASS):
+                level = root.replace(sys._MEIPASS, '').count(os.sep)
+                indent = ' ' * 2 * level
+                print(f"{indent}{os.path.basename(root)}/")
+                subindent = ' ' * 2 * (level + 1)
+                for file in files:
+                    print(f"{subindent}{file}")
+        except Exception as e:
+            print(f"Exe icindeki dosyalar listelenemedi: {e}")
     
     print(f"Python version: {sys.version}")
     print(f"Current working directory: {os.getcwd()}")
@@ -49,24 +62,14 @@ def main():
         except ImportError as e:
             raise RuntimeError(f"NumPy yuklu degil: {e}")
         
-        # MODNet model dosyası kontrolü
-        if getattr(sys, 'frozen', False):
-            base_path = sys._MEIPASS
-            model_path = os.path.join(base_path, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
-            print(f"[DEBUG] PyInstaller exe modu - base_path: {base_path}")
-        else:
-            try:
-                script_dir = os.path.dirname(__file__)
-            except NameError:
-                script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-            model_path = os.path.join(script_dir, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
-            print(f"[DEBUG] Normal Python modu - script_dir: {script_dir}")
-        
-        print(f"Model path: {model_path}")
-        if not os.path.exists(model_path):
-            raise RuntimeError(f"MODNet model dosyasi bulunamadi: {model_path}")
-        else:
-            print(f"[OK] MODNet model dosyasi bulundu: {os.path.getsize(model_path)} bytes")
+        # MODNet model dosyası kontrolü - Model loader kullan
+        try:
+            from app_modules.model_loader import get_model_path
+            model_path = get_model_path()
+            print(f"[OK] Model dosyasi yuklendi: {model_path}")
+            print(f"[OK] Dosya boyutu: {os.path.getsize(model_path)} bytes")
+        except Exception as e:
+            raise RuntimeError(f"Model dosyasi yuklenemedi: {e}")
         
         # ModNet Local import
         from app_modules.modnet_local import ModNetLocalBGRemover
