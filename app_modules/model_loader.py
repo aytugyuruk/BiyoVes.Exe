@@ -49,8 +49,8 @@ def download_model_to_temp() -> str:
     """
     Model dosyasini temp klasorune indirir
     """
-    # Google Drive'dan indir
-    model_url = "https://drive.google.com/uc?export=download&id=11SBrkihQhtitVLqCKPW8mdQM2T1G0LTE"
+    # Google Drive'dan indir (confirm=t parametresi buyuk dosyalar icin gerekli)
+    model_url = "https://drive.usercontent.google.com/download?id=11SBrkihQhtitVLqCKPW8mdQM2T1G0LTE&export=download&confirm=t"
     
     # Temp klasorunde model dosyasi icin yer olustur
     temp_dir = os.path.join(tempfile.gettempdir(), "biyoves_modnet")
