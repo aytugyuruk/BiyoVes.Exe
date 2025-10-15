@@ -14,14 +14,47 @@ import numpy as np
 from app_modules.modnet_bg import ModNetBGRemover
 
 # ModNet Local - PyTorch yoksa yüklenmez
+MODNET_LOCAL_AVAILABLE = False
+ModNetLocalBGRemover = None
+MODNET_LOCAL_ERROR = None
+
 try:
+    print("🔍 ModNet Local yüklenmeye çalışılıyor...")
+    
+    # Önce PyTorch kontrolü
+    try:
+        import torch
+        print(f"✅ PyTorch yüklü: {torch.__version__}")
+    except ImportError as e:
+        raise RuntimeError(f"PyTorch yüklü değil: {e}")
+    
+    # NumPy kontrolü
+    try:
+        import numpy as np
+        print(f"✅ NumPy yüklü: {np.__version__}")
+    except ImportError as e:
+        raise RuntimeError(f"NumPy yüklü değil: {e}")
+    
+    # MODNet model dosyası kontrolü
+    import os
+    model_path = os.path.join(os.path.dirname(__file__), 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
+    if not os.path.exists(model_path):
+        raise RuntimeError(f"MODNet model dosyası bulunamadı: {model_path}")
+    else:
+        print(f"✅ MODNet model dosyası bulundu: {model_path}")
+    
+    # ModNet Local import
     from app_modules.modnet_local import ModNetLocalBGRemover
+    print("✅ ModNet Local modülü başarıyla yüklendi")
     MODNET_LOCAL_AVAILABLE = True
-except (ImportError, RuntimeError) as e:
-    print(f"⚠️ ModNet Local yüklenemedi: {e}")
+    
+except Exception as e:
+    print(f"❌ ModNet Local yüklenemedi: {e}")
+    print(f"   Hata türü: {type(e).__name__}")
     print("   Sadece ModNet API kullanılabilir.")
     ModNetLocalBGRemover = None
     MODNET_LOCAL_AVAILABLE = False
+    MODNET_LOCAL_ERROR = str(e)
 
 from app_modules.center_biyo import create_smart_biometric_photo as create_biyometrik
 from app_modules.center_vesika import create_smart_vesikalik_photo as create_vesikalik
@@ -53,11 +86,19 @@ class ModelLoaderWorker:
             if MODNET_LOCAL_AVAILABLE and ModNetLocalBGRemover:
                 try:
                     self.callback("progress", "ModNet Local başlatılıyor...")
+                    print("🔄 ModNet Local instance oluşturuluyor...")
                     modnet_local = ModNetLocalBGRemover()
+                    print("✅ ModNet Local başarıyla başlatıldı")
                 except Exception as e:
-                    print(f"⚠️ ModNet Local başlatılamadı: {e}")
+                    print(f"❌ ModNet Local başlatılamadı: {e}")
+                    print(f"   Hata türü: {type(e).__name__}")
+                    import traceback
+                    traceback.print_exc()
             else:
-                print("⚠️ ModNet Local kullanılamıyor (PyTorch yüklü değil)")
+                if MODNET_LOCAL_ERROR:
+                    print(f"⚠️ ModNet Local kullanılamıyor: {MODNET_LOCAL_ERROR}")
+                else:
+                    print("⚠️ ModNet Local kullanılamıyor (PyTorch yüklü değil)")
             
             self.callback("finished", {"api": modnet_api, "local": modnet_local})
             print("✅ AI servisleri başarıyla başlatıldı")
