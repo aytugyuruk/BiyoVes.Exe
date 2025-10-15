@@ -119,6 +119,10 @@ class ModelLoaderWorker:
             
             self.callback("finished", {"api": modnet_api, "local": modnet_local})
             print("✅ AI servisleri başarıyla başlatıldı")
+            print(f"🔍 Debug - modnet_api: {modnet_api}")
+            print(f"🔍 Debug - modnet_local: {modnet_local}")
+            print(f"🔍 Debug - MODNET_LOCAL_AVAILABLE: {MODNET_LOCAL_AVAILABLE}")
+            print(f"🔍 Debug - ModNetLocalBGRemover: {ModNetLocalBGRemover}")
         except Exception as e:
             error_msg = f"AI servis başlatma hatası: {e}"
             print(f"Hata: {error_msg}")

@@ -96,6 +96,13 @@ jobs:
           echo "Build output structure:"
           Get-ChildItem -Path "dist" -Recurse | Format-Table -AutoSize
       
+      - name: Test exe with debug script
+        run: |
+          echo "Testing exe with debug script..."
+          pyinstaller --onefile --name="DebugBiyoVes" debug_exe.py
+          echo "Debug exe created, testing..."
+          .\dist\DebugBiyoVes.exe
+      
       - name: Create release package
         run: |
           New-Item -ItemType Directory -Force -Path "release"
