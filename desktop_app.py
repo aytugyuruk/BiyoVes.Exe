@@ -12,6 +12,17 @@ import numpy as np
 # Assume these local modules are in a sub-directory named 'app_modules'
 # and are compatible with the rest of the application.
 from app_modules.modnet_bg import ModNetBGRemover
+
+# ModNet Local - PyTorch yoksa yüklenmez
+try:
+    from app_modules.modnet_local import ModNetLocalBGRemover
+    MODNET_LOCAL_AVAILABLE = True
+except (ImportError, RuntimeError) as e:
+    print(f"⚠️ ModNet Local yüklenemedi: {e}")
+    print("   Sadece ModNet API kullanılabilir.")
+    ModNetLocalBGRemover = None
+    MODNET_LOCAL_AVAILABLE = False
+
 from app_modules.center_biyo import create_smart_biometric_photo as create_biyometrik
 from app_modules.center_vesika import create_smart_vesikalik_photo as create_vesikalik
 from app_modules.duzen import (
@@ -31,10 +42,25 @@ class ModelLoaderWorker:
     def run(self):
         try:
             self.callback("progress", "AI servisleri başlatılıyor...")
-            print("Replicate API bağlantısı kontrol ediliyor...")
-            bg_remover = ModNetBGRemover()
-            self.callback("finished", bg_remover)
-            print("AI servisleri başarıyla başlatıldı")
+            print("ModNet servisleri kontrol ediliyor...")
+            
+            # ModNet API başlat
+            self.callback("progress", "ModNet API başlatılıyor...")
+            modnet_api = ModNetBGRemover()
+            
+            # ModNet Local başlat (PyTorch varsa)
+            modnet_local = None
+            if MODNET_LOCAL_AVAILABLE and ModNetLocalBGRemover:
+                try:
+                    self.callback("progress", "ModNet Local başlatılıyor...")
+                    modnet_local = ModNetLocalBGRemover()
+                except Exception as e:
+                    print(f"⚠️ ModNet Local başlatılamadı: {e}")
+            else:
+                print("⚠️ ModNet Local kullanılamıyor (PyTorch yüklü değil)")
+            
+            self.callback("finished", {"api": modnet_api, "local": modnet_local})
+            print("✅ AI servisleri başarıyla başlatıldı")
         except Exception as e:
             error_msg = f"AI servis başlatma hatası: {e}"
             print(f"Hata: {error_msg}")
@@ -58,7 +84,7 @@ class ProcessingWorker:
             self.callback("error", error_message)
 
     def _process_pipeline(self) -> None:
-        if not self.app.bg_remover:
+        if not self.app.bg_removers:
             raise RuntimeError("AI servisleri hazır değil")
 
         selection_text = self.app.type_var.get()
@@ -69,8 +95,16 @@ class ProcessingWorker:
         base_dir, filename = os.path.split(in_path)
         name, _ = os.path.splitext(filename)
         
-        self.callback("progress", "Arkaplan kaldırılıyor...")
-        no_bg_path = self.app.bg_remover.remove_background(in_path)
+        # Seçilen arkaplan kaldırma yöntemini kullan
+        bg_method = self.app.bg_method_var.get()
+        if bg_method == "local" and self.app.bg_removers.get("local"):
+            self.callback("progress", "Arkaplan kaldırılıyor (Local - Hızlı)...")
+            bg_remover = self.app.bg_removers["local"]
+        else:
+            self.callback("progress", "Arkaplan kaldırılıyor (API)...")
+            bg_remover = self.app.bg_removers["api"]
+        
+        no_bg_path = bg_remover.remove_background(in_path)
         if no_bg_path is None: raise RuntimeError("Arkaplan kaldırılamadı")
 
         self.callback("progress", "Yüz merkezleniyor...")
@@ -180,9 +214,10 @@ class MainWindow:
         # Variables
         self.image_path = None
         self.enable_retouch = tk.BooleanVar()
-        self.bg_remover = None
+        self.bg_removers = None  # Dictionary: {"api": ModNetAPI, "local": ModNetLocal}
         self.type_var = tk.StringVar(value="Vesikalık")
         self.layout_var = tk.StringVar(value="4lu")
+        self.bg_method_var = tk.StringVar(value="api")  # Varsayılan: API
         
         self._build_ui()
         self._start_model_loading()
@@ -244,6 +279,25 @@ class MainWindow:
                                       fg="#BDBDBD", font=("Arial", 14),
                                       command=self._on_type_change)
         self.tek_radio.pack(side="left", padx=10)
+        
+        # Background removal method selection
+        bg_method_frame = tk.Frame(settings_frame, bg="#323232")
+        bg_method_frame.pack(fill="x", padx=10, pady=5)
+        
+        tk.Label(bg_method_frame, text="Arkaplan Yöntemi:", font=("Arial", 14, "bold"), 
+                fg="#BDBDBD", bg="#323232").pack(side="left")
+        
+        self.api_radio = tk.Radiobutton(bg_method_frame, text="ModNet API (İnternet)", 
+                                        variable=self.bg_method_var, value="api", 
+                                        state="disabled", bg="#323232", fg="#BDBDBD", 
+                                        font=("Arial", 14))
+        self.api_radio.pack(side="left", padx=10)
+        
+        self.local_radio = tk.Radiobutton(bg_method_frame, text="ModNet Local (Yerel - Hızlı)", 
+                                         variable=self.bg_method_var, value="local", 
+                                         state="disabled", bg="#323232", fg="#BDBDBD", 
+                                         font=("Arial", 14))
+        self.local_radio.pack(side="left", padx=10)
         
         # Layout selection
         self.layout_frame = tk.Frame(settings_frame, bg="#323232")
@@ -359,8 +413,17 @@ class MainWindow:
         if event_type == "progress":
             self.set_model_status(args[0])
         elif event_type == "finished":
-            self.bg_remover = args[0]
-            self.set_model_status("Hazır")
+            self.bg_removers = args[0]
+            
+            # Local yoksa o seçeneği devre dışı bırak
+            if not self.bg_removers.get("local"):
+                self.local_radio.config(state="disabled")
+                self.bg_method_var.set("api")  # Varsayılan olarak API seç
+                status_msg = "Hazır (sadece API)"
+            else:
+                status_msg = "Hazır (API + Local)"
+            
+            self.set_model_status(status_msg)
             self.set_status("Başlamak için bir fotoğraf seçin.")
             self._enable_all_controls(True)
         elif event_type == "error":
@@ -391,6 +454,8 @@ class MainWindow:
         self.vesikalik_radio.config(state=state)
         self.biyometrik_radio.config(state=state)
         self.tek_radio.config(state=state)
+        self.api_radio.config(state=state)
+        self.local_radio.config(state=state)
         self.fourlu_radio.config(state=state)
         self.twoli_radio.config(state=state)
 
@@ -407,7 +472,7 @@ class MainWindow:
         if not self.image_path:
             messagebox.showwarning("Uyarı", "Lütfen önce bir fotoğraf seçin.")
             return
-        if not self.bg_remover:
+        if not self.bg_removers:
             messagebox.showwarning("Uyarı", "AI servisleri henüz hazır değil, lütfen bekleyin.")
             return
         if not credits_manager.has_credits():

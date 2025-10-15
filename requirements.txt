@@ -5,3 +5,7 @@ requests>=2.31.0
 replicate>=0.32.1
 python-dotenv>=1.0.1
 pyinstaller>=6.0.0
+
+# ModNet Local için (isteğe bağlı - yerel işlem için)
+torch>=2.0.0
+torchvision>=0.15.0
