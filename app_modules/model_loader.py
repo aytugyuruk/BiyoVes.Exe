@@ -117,17 +117,29 @@ def download_model_to_temp() -> str:
         print(f"[INFO] Model dosyasi zaten mevcut: {model_path}")
         return model_path
     
-    # Model dosyasini Google Drive'dan indir
+    # Model dosyasini Google Drive'dan indir (ZIP formatinda)
     try:
         print(f"[INFO] Model dosyasi Google Drive'dan indiriliyor...")
         print(f"[INFO] URL: {model_url}")
         
+        zip_path = os.path.join(temp_dir, "models.zip")
+        
         response = requests.get(model_url, stream=True, timeout=60)
         response.raise_for_status()
         
-        with open(model_path, 'wb') as f:
+        with open(zip_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
+        
+        print(f"[INFO] Model ZIP indirildi, cikartiliyor...")
+        
+        # ZIP'i çıkart
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # modnet_photographic_portrait_matting.ckpt dosyasini cikart
+            zip_ref.extract('modnet_photographic_portrait_matting.ckpt', temp_dir)
+        
+        # Zip dosyasini temizle
+        os.remove(zip_path)
         
         # Dosya boyutunu kontrol et (25MB civarinda olmali)
         file_size = os.path.getsize(model_path)
