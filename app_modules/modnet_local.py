@@ -23,7 +23,12 @@ if getattr(sys, 'frozen', False):
     modnet_path = os.path.join(sys._MEIPASS, 'MODNet', 'src')
 else:
     # Normal Python script için
-    modnet_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'MODNet', 'src'))
+    try:
+        script_dir = os.path.dirname(__file__)
+    except NameError:
+        # __file__ tanımlı değilse (bazı exe durumlarında)
+        script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    modnet_path = os.path.abspath(os.path.join(script_dir, '..', 'MODNet', 'src'))
 
 if modnet_path not in sys.path:
     sys.path.insert(0, modnet_path)
@@ -68,7 +73,12 @@ class ModNetLocalBGRemover:
                 print(f"🔍 PyInstaller exe modu - base_path: {base_path}")
             else:
                 # Normal Python script
-                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+                try:
+                    script_dir = os.path.dirname(__file__)
+                except NameError:
+                    # __file__ tanımlı değilse (bazı exe durumlarında)
+                    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+                project_root = os.path.abspath(os.path.join(script_dir, '..'))
                 ckpt_path = os.path.join(
                     project_root, 
                     'MODNet', 

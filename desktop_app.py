@@ -47,8 +47,13 @@ try:
         print(f"🔍 PyInstaller exe modu - base_path: {base_path}")
     else:
         # Normal Python script
-        model_path = os.path.join(os.path.dirname(__file__), 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
-        print(f"🔍 Normal Python modu - model_path: {model_path}")
+        try:
+            script_dir = os.path.dirname(__file__)
+        except NameError:
+            # __file__ tanımlı değilse (bazı exe durumlarında)
+            script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+        model_path = os.path.join(script_dir, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
+        print(f"🔍 Normal Python modu - script_dir: {script_dir}")
     
     if not os.path.exists(model_path):
         raise RuntimeError(f"MODNet model dosyası bulunamadı: {model_path}")

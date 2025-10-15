@@ -80,6 +80,13 @@ jobs:
             --collect-all=importlib.metadata `
             --collect-all=torch `
             --collect-all=torchvision `
+            --collect-all=torch.distributed `
+            --collect-all=torch.nn `
+            --collect-all=torch.nn.functional `
+            --collect-all=torchvision.transforms `
+            --collect-all=torchvision.models `
+            --collect-all=torchvision.datasets `
+            --collect-all=torchvision.utils `
             --clean `
             --noconfirm `
             desktop_app.py
