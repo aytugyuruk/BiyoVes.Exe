@@ -49,7 +49,11 @@ def download_model_to_temp() -> str:
     """
     Model dosyasını temp klasörüne indirir
     """
-    model_url = "https://github.com/ZHKKKe/MODNet/releases/download/v1.0.0/modnet_photographic_portrait_matting.ckpt"
+    # İndirme URL'leri (öncelik sırasına göre)
+    download_urls = [
+        "https://github.com/ZHKKKe/MODNet/releases/download/v1.0.0/modnet_photographic_portrait_matting.ckpt",
+        "https://drive.google.com/uc?export=download&id=11SBrkihQhtitVLqCKPW8mdQM2T1G0LTE"
+    ]
     
     # Temp klasöründe model dosyası için yer oluştur
     temp_dir = os.path.join(tempfile.gettempdir(), "biyoves_modnet")
@@ -62,22 +66,38 @@ def download_model_to_temp() -> str:
         print(f"[INFO] Model dosyasi zaten mevcut: {model_path}")
         return model_path
     
-    # Model dosyasını indir
-    try:
-        print(f"[INFO] Model dosyasi indiriliyor: {model_url}")
-        response = requests.get(model_url, stream=True)
-        response.raise_for_status()
-        
-        with open(model_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        
-        print(f"[SUCCESS] Model dosyasi indirildi: {model_path}")
-        print(f"[INFO] Dosya boyutu: {os.path.getsize(model_path)} bytes")
-        return model_path
-        
-    except Exception as e:
-        raise RuntimeError(f"Model dosyasi indirilemedi: {e}")
+    # Model dosyasını indir - birden fazla kaynaktan dene
+    for i, model_url in enumerate(download_urls):
+        try:
+            source_name = "GitHub" if i == 0 else "Google Drive"
+            print(f"[INFO] Model dosyasi {source_name}'dan indiriliyor...")
+            print(f"[INFO] URL: {model_url}")
+            
+            response = requests.get(model_url, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            with open(model_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            # Dosya boyutunu kontrol et (25MB civarında olmalı)
+            file_size = os.path.getsize(model_path)
+            if file_size < 20_000_000:  # 20MB'den küçükse hatalı
+                os.remove(model_path)
+                raise Exception(f"Dosya boyutu çok küçük: {file_size} bytes")
+            
+            print(f"[SUCCESS] Model dosyasi {source_name}'dan indirildi: {model_path}")
+            print(f"[INFO] Dosya boyutu: {file_size} bytes")
+            return model_path
+            
+        except Exception as e:
+            print(f"[WARNING] {source_name} indirme başarısız: {e}")
+            if os.path.exists(model_path):
+                os.remove(model_path)
+            continue
+    
+    # Tüm kaynaklar başarısız
+    raise RuntimeError("Model dosyasi hiçbir kaynaktan indirilemedi!")
 
 def cleanup_temp_model():
     """
