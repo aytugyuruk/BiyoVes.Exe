@@ -13,6 +13,16 @@ jobs:
         with:
           lfs: true
       
+      - name: Pull Git LFS files
+        run: |
+          git lfs pull
+          echo "Git LFS files pulled"
+          if (Test-Path "MODNet/pretrained/modnet_photographic_portrait_matting.ckpt") { 
+            echo "MODNet model file found: $((Get-Item 'MODNet/pretrained/modnet_photographic_portrait_matting.ckpt').Length) bytes" 
+          } else { 
+            echo "MODNet model file NOT found!" 
+          }
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -51,6 +61,7 @@ jobs:
             --add-data="haarcascade_frontalface_default.xml;." `
             --add-data="app_modules;app_modules" `
             --add-data="MODNet;MODNet" `
+            --add-data="MODNet/pretrained/modnet_photographic_portrait_matting.ckpt;MODNet/pretrained/" `
             --hidden-import=cv2 `
             --hidden-import=PIL `
             --hidden-import=numpy `
