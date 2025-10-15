@@ -32,7 +32,7 @@ else:
 
 if modnet_path not in sys.path:
     sys.path.insert(0, modnet_path)
-    print(f"🔍 MODNet path eklendi: {modnet_path}")
+    print(f"[DEBUG] MODNet path eklendi: {modnet_path}")
 
 try:
     from models.modnet import MODNet
@@ -56,40 +56,40 @@ class ModNetLocalBGRemover:
         """
         # GPU/CPU kontrol
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"🖥️  ModNet Local cihaz: {self.device}")
+        print(f"[INFO] ModNet Local cihaz: {self.device}")
         
         # Model checkpoint yolu
         if ckpt_path is None:
-            # Model loader kullanarak model dosyasını al
+            # Model loader kullanarak model dosyasini al
             from .model_loader import get_model_path
             ckpt_path = get_model_path()
-            print(f"📦 Model dosyası yolu: {ckpt_path}")
+            print(f"[INFO] Model dosyasi yolu: {ckpt_path}")
         
         if not os.path.exists(ckpt_path):
             raise RuntimeError(
-                f"MODNet model dosyası bulunamadı: {ckpt_path}\n"
-                "Lütfen MODNet/pretrained/ klasöründe model dosyasının olduğundan emin olun."
+                f"MODNet model dosyasi bulunamadi: {ckpt_path}\n"
+                "Lutfen MODNet/pretrained/ klasorunde model dosyasinin oldugunu emin olun."
             )
         
-        print(f"📦 Model dosyası: {ckpt_path}")
+        print(f"[INFO] Model dosyasi: {ckpt_path}")
         
         # Model oluştur
         self.model = MODNet(backbone_pretrained=False)
         self.model = nn.DataParallel(self.model)
         
-        # Checkpoint yükle
+        # Checkpoint yukle
         try:
             checkpoint = torch.load(ckpt_path, map_location=self.device)
             self.model.load_state_dict(checkpoint)
-            print("✅ ModNet Local model yüklendi")
+            print("[OK] ModNet Local model yuklendi")
         except Exception as e:
-            raise RuntimeError(f"Model checkpoint yüklenemedi: {e}")
+            raise RuntimeError(f"Model checkpoint yuklenemedi: {e}")
         
         # Model evaluation moduna al
         self.model.eval()
         self.model.to(self.device)
         
-        # Görüntü transform
+        # Goruntu transform
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -160,7 +160,7 @@ class ModNetLocalBGRemover:
         except Exception as e:
             raise RuntimeError(f"Model inference hatası: {e}")
         
-        print("✅ Arkaplan başarıyla kaldırıldı")
+        print("[OK] Arkaplan basariyla kaldirildi")
         
         # Matte'yi orijinal boyuta geri getir
         if new_size != original_size:
