@@ -1,31 +1,85 @@
 """
-Model dosyası yükleme ve kaydetme modülü
-PyInstaller exe'de model dosyasını otomatik olarak yükler
+Model dosyası ve MODNet klasörü yükleme modülü
+PyInstaller exe'de model dosyasını ve MODNet klasörünü otomatik olarak yükler
 """
 
 import os
 import sys
 import tempfile
 import requests
+import zipfile
+import shutil
 from typing import Optional
+
+def setup_modnet_folder():
+    """
+    MODNet klasörünü temp'e kurar (exe modu için)
+    """
+    temp_dir = os.path.join(tempfile.gettempdir(), "biyoves_modnet")
+    modnet_src_path = os.path.join(temp_dir, "MODNet", "src")
+    
+    # MODNet klasörü zaten varsa kullan
+    if os.path.exists(modnet_src_path):
+        print(f"[INFO] MODNet klasoru zaten mevcut: {modnet_src_path}")
+        return modnet_src_path
+    
+    # MODNet klasörünü GitHub'dan indir
+    print("[INFO] MODNet klasoru GitHub'dan indiriliyor...")
+    modnet_url = "https://github.com/Mazhar004/MODNet-BGRemover/archive/refs/heads/main.zip"
+    
+    try:
+        response = requests.get(modnet_url, stream=True, timeout=60)
+        response.raise_for_status()
+        
+        zip_path = os.path.join(temp_dir, "modnet.zip")
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        with open(zip_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"[INFO] MODNet zip indirildi, cikartiliyor...")
+        
+        # ZIP'i çıkart
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+        
+        # İndirilen klasörü düzenle
+        extracted_folder = os.path.join(temp_dir, "MODNet-BGRemover-main")
+        target_folder = os.path.join(temp_dir, "MODNet")
+        
+        if os.path.exists(extracted_folder):
+            if os.path.exists(target_folder):
+                shutil.rmtree(target_folder)
+            shutil.move(extracted_folder, target_folder)
+        
+        # Zip dosyasını temizle
+        os.remove(zip_path)
+        
+        print(f"[SUCCESS] MODNet klasoru kuruldu: {modnet_src_path}")
+        
+        # sys.path'e ekle
+        if modnet_src_path not in sys.path:
+            sys.path.insert(0, modnet_src_path)
+        
+        return modnet_src_path
+        
+    except Exception as e:
+        raise RuntimeError(f"MODNet klasoru indirilemedi: {e}")
 
 def get_model_path() -> str:
     """
-    MODNet model dosyasının yolunu döndürür.
-    Exe'de çalışıyorsa model dosyasını otomatik olarak yükler.
+    MODNet model dosyasinin yolunu dondurur.
+    Exe'de calisiyorsa model dosyasini otomatik olarak yukler.
     """
     
     # PyInstaller exe modu
     if getattr(sys, 'frozen', False):
-        base_path = sys._MEIPASS
-        model_path = os.path.join(base_path, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
+        # MODNet klasörünü kur
+        setup_modnet_folder()
         
-        # Model dosyasi exe'de varsa kullan
-        if os.path.exists(model_path):
-            return model_path
-        
-        # Model dosyasi yoksa temp klasorune indir
-        print("[INFO] Model dosyasi exe'de bulunamadi, indiriliyor...")
+        # Model dosyasını indir
+        print("[INFO] Model dosyasi indiriliyor...")
         return download_model_to_temp()
     
     # Normal Python modu
