@@ -37,7 +37,19 @@ try:
     
     # MODNet model dosyası kontrolü
     import os
-    model_path = os.path.join(os.path.dirname(__file__), 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
+    import sys
+    
+    # PyInstaller exe için dosya yolu kontrolü
+    if getattr(sys, 'frozen', False):
+        # PyInstaller ile oluşturulan exe
+        base_path = sys._MEIPASS
+        model_path = os.path.join(base_path, 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
+        print(f"🔍 PyInstaller exe modu - base_path: {base_path}")
+    else:
+        # Normal Python script
+        model_path = os.path.join(os.path.dirname(__file__), 'MODNet', 'pretrained', 'modnet_photographic_portrait_matting.ckpt')
+        print(f"🔍 Normal Python modu - model_path: {model_path}")
+    
     if not os.path.exists(model_path):
         raise RuntimeError(f"MODNet model dosyası bulunamadı: {model_path}")
     else:

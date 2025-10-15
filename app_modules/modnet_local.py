@@ -18,9 +18,16 @@ except ImportError:
 
 # MODNet model import
 # MODNet klasörünü Python path'e ekle
-modnet_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'MODNet', 'src'))
+if getattr(sys, 'frozen', False):
+    # PyInstaller exe için
+    modnet_path = os.path.join(sys._MEIPASS, 'MODNet', 'src')
+else:
+    # Normal Python script için
+    modnet_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'MODNet', 'src'))
+
 if modnet_path not in sys.path:
     sys.path.insert(0, modnet_path)
+    print(f"🔍 MODNet path eklendi: {modnet_path}")
 
 try:
     from models.modnet import MODNet
@@ -48,14 +55,27 @@ class ModNetLocalBGRemover:
         
         # Model checkpoint yolu
         if ckpt_path is None:
-            # Varsayılan: MODNet/pretrained/modnet_photographic_portrait_matting.ckpt
-            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            ckpt_path = os.path.join(
-                project_root, 
-                'MODNet', 
-                'pretrained', 
-                'modnet_photographic_portrait_matting.ckpt'
-            )
+            # PyInstaller exe için dosya yolu kontrolü
+            if getattr(sys, 'frozen', False):
+                # PyInstaller ile oluşturulan exe
+                base_path = sys._MEIPASS
+                ckpt_path = os.path.join(
+                    base_path, 
+                    'MODNet', 
+                    'pretrained', 
+                    'modnet_photographic_portrait_matting.ckpt'
+                )
+                print(f"🔍 PyInstaller exe modu - base_path: {base_path}")
+            else:
+                # Normal Python script
+                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+                ckpt_path = os.path.join(
+                    project_root, 
+                    'MODNet', 
+                    'pretrained', 
+                    'modnet_photographic_portrait_matting.ckpt'
+                )
+                print(f"🔍 Normal Python modu - project_root: {project_root}")
         
         if not os.path.exists(ckpt_path):
             raise RuntimeError(
