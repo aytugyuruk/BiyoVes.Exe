@@ -207,8 +207,8 @@ class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("BiyoVes - Vesikalık & Biyometrik")
-        self.root.geometry("700x800")
-        self.root.minsize(650, 750)  # Minimum boyut
+        self.root.geometry("700x900")
+        self.root.minsize(650, 850)  # Minimum boyut
         self.root.configure(bg='#212121')
         
         # Variables
@@ -284,16 +284,16 @@ class MainWindow:
         bg_method_frame = tk.Frame(settings_frame, bg="#323232")
         bg_method_frame.pack(fill="x", padx=10, pady=5)
         
-        tk.Label(bg_method_frame, text="Arkaplan Yöntemi:", font=("Arial", 14, "bold"), 
+        tk.Label(bg_method_frame, text="Model:", font=("Arial", 14, "bold"), 
                 fg="#BDBDBD", bg="#323232").pack(side="left")
         
-        self.api_radio = tk.Radiobutton(bg_method_frame, text="ModNet API (İnternet)", 
+        self.api_radio = tk.Radiobutton(bg_method_frame, text="Online", 
                                         variable=self.bg_method_var, value="api", 
                                         state="disabled", bg="#323232", fg="#BDBDBD", 
                                         font=("Arial", 14))
         self.api_radio.pack(side="left", padx=10)
         
-        self.local_radio = tk.Radiobutton(bg_method_frame, text="ModNet Local (Yerel - Hızlı)", 
+        self.local_radio = tk.Radiobutton(bg_method_frame, text="Offline", 
                                          variable=self.bg_method_var, value="local", 
                                          state="disabled", bg="#323232", fg="#BDBDBD", 
                                          font=("Arial", 14))
